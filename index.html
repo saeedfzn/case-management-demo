@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case Management Demo</title>
+<meta name="description" content="Concept demo of a council housing-repairs case management app: SLA queue, security roles, automations, a legacy CRM migration dry run and Dataverse design notes. Built by Faizaan Saeed.">
+<meta property="og:title" content="Citizen case management: a Power Platform concept demo by Faizaan Saeed">
+<meta property="og:description" content="Clickable concept: log and work housing-repair cases with SLA timers, role-based access and a full audit trail, plus a legacy migration dry run and Dataverse / Dynamics 365 design notes.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%231c5cab%27/%3E%3Cpath d=%27M4 8.5l2.5 2.5L12 5.5%27 stroke=%27%23fff%27 stroke-width=%272%27 fill=%27none%27/%3E%3C/svg%3E">
+<meta property="og:url" content="https://saeedfzn.github.io/case-management-demo/">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f6f5f2; --surface:#fcfcfb; --surface-2:#f0efec; --line:#dedcd6;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#6c6a64;
+  --accent:#2a78d6; --accent-ink:#1c5cab; --accent-soft:#cde2fb;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --good-ink:#006300; --critical-ink:#b02a2a; --warn-ink:#8a5a00;
+  --cell-bad:#fde8e4; --cell-warn:#fdf3dc;
+  --accent-solid:#1c5cab; --field:#8a8880;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#232321; --line:#383835;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#9a998f;
+    --accent:#3987e5; --accent-ink:#86b6ef; --accent-soft:#16365c;
+    --good-ink:#6fd66f; --critical-ink:#f08a8a; --warn-ink:#fab219;
+    --cell-bad:#3a201c; --cell-warn:#3a301a;
+    --accent-solid:#2468bd; --field:#7d7c74;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1a1a19; --surface-2:#232321; --line:#383835;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#9a998f;
+  --accent:#3987e5; --accent-ink:#86b6ef; --accent-soft:#16365c;
+  --good-ink:#6fd66f; --critical-ink:#f08a8a; --warn-ink:#fab219;
+  --cell-bad:#3a201c; --cell-warn:#3a301a;
+  --accent-solid:#2468bd; --field:#7d7c74;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+#skip:focus{position:fixed;left:12px;top:12px;width:auto;height:auto;clip:auto;z-index:10;background:var(--accent-solid);color:#fff;padding:8px 12px;border-radius:6px}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-wrap:break-word}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+header.hero{padding:48px 0 28px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-ink);font-weight:600}
+h1{font-size:clamp(28px,5vw,42px);line-height:1.1;margin:8px 0 12px;letter-spacing:-.01em}
+h2{font-size:22px;margin:0 0 6px}
+h3{font-size:15px;margin:0 0 8px}
+p.lede{font-size:17px;color:var(--text-2);max-width:740px;margin:0}
+.note{margin-top:18px;padding:12px 14px;border-left:3px solid var(--accent);background:var(--surface);color:var(--text-2);font-size:14px;max-width:780px;border-radius:0 6px 6px 0}
+nav.toc{display:flex;gap:6px;flex-wrap:wrap;margin-top:20px}
+nav.toc a{font-size:13px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;color:var(--text-2);text-decoration:none;background:var(--surface)}
+nav.toc a:hover{border-color:var(--accent);color:var(--text)}
+section{padding:36px 0;border-top:1px solid var(--line)}
+.step{display:inline-block;font-size:12px;font-weight:600;color:var(--accent-ink);margin-bottom:4px}
+.sub{color:var(--text-2);margin:0 0 18px;max-width:780px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.grid{display:grid;gap:14px}
+.grid>*{min-width:0}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.gapp{grid-template-columns:1.55fr 1fr}
+@media (max-width:860px){.g2,.g3,.gapp{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--text-2);font-weight:600;font-size:12px}
+td.nw,th.nw,.nw{white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+pre.code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--surface-2);border-radius:8px;padding:10px;margin:8px 0 0;overflow-x:auto;white-space:pre;line-height:1.5;max-width:100%}
+.byline{margin:0 0 14px;font-size:14px;color:var(--text-2)}
+.cta{display:inline-block;margin-top:16px;padding:9px 14px;border-radius:6px;background:var(--accent-solid);color:#fff;text-decoration:none;font-weight:600;font-size:14px}
+.issues{margin:12px 0 0;padding-left:18px;color:var(--text-2);font-size:14px}
+.issues li{margin:3px 0}
+label{display:block;font-size:12px;color:var(--text-2);margin:10px 0 4px;font-weight:600}
+label.inline{display:flex;gap:8px;align-items:center;font-weight:400;font-size:13px;margin:8px 0 0}
+label.inline input{width:auto}
+input,select,textarea{width:100%;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--field);border-radius:6px;background:var(--surface);color:var(--text)}
+textarea{resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+input[aria-invalid="true"],select[aria-invalid="true"],textarea[aria-invalid="true"]{border-color:var(--critical)}
+button{font:inherit;font-size:14px;border-radius:6px;border:1px solid var(--field);background:var(--surface);color:var(--text);padding:8px 12px;cursor:pointer}
+button.primary{background:var(--accent-solid);border-color:var(--accent-solid);color:#fff;font-weight:600}
+button.sm{font-size:12px;padding:4px 8px}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.between{justify-content:space-between}
+.err{color:var(--critical-ink);font-size:12px;min-height:0;margin-top:3px}
+.formerr{color:var(--critical-ink);font-size:13px;margin-top:8px;min-height:18px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--text);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.log{font-family:ui-monospace,Consolas,monospace;font-size:12px;max-height:300px;overflow:auto;background:var(--surface-2);border-radius:8px;padding:10px;margin:0;list-style:none}
+.log li{padding:5px 0;border-bottom:1px dashed var(--line);color:var(--text-2)}
+.log li b{color:var(--text)}
+.flows .card h3{display:flex;gap:8px;align-items:center}
+.trig{font-size:12px;color:var(--muted)}
+.flows ol{margin:8px 0 0;padding-left:18px;font-size:14px;color:var(--text-2)}
+.kpi .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .l{font-size:12px;color:var(--text-2);margin-top:4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent-ink);font-weight:600;background:var(--accent-soft)}
+footer{padding:36px 0 60px;border-top:1px solid var(--line);color:var(--text-2);font-size:14px}
+footer a,section a,.note a{color:var(--accent-ink)}
+.tag{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.theme-toggle{position:absolute;top:12px;right:12px;font-size:12px;padding:5px 9px;z-index:5}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.rolebar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
+.clock{font-size:13px;color:var(--text-2);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.clock b{font-variant-numeric:tabular-nums;color:var(--text)}
+.denied{font-size:12px;color:var(--warn-ink);margin:6px 0 0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin:8px 0}
+.kv dt{color:var(--text-2)}
+.kv dd{margin:0}
+.audit{list-style:none;margin:0;padding:0;font-size:12px;max-height:260px;overflow:auto}
+.audit li{padding:6px 0;border-bottom:1px dashed var(--line);color:var(--text-2)}
+.audit li b{color:var(--text)}
+.notes{list-style:none;margin:0;padding:0;font-size:13px}
+.notes li{padding:8px 10px;background:var(--surface-2);border-radius:6px;margin:6px 0}
+.lane{font-size:12px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0 10px}
+.lane span{padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.lane span.on{border-color:var(--accent);color:var(--accent-ink);font-weight:700;background:var(--accent-soft)}
+.lane span.done{color:var(--text-2)}
+tr.sel td{background:var(--accent-soft)}
+tr.sel .muted,tr.sel .tag{color:var(--text-2)}
+.backq{display:none;margin:10px 0 0}
+@media (max-width:860px){.backq{display:block}}
+td.bad{background:var(--cell-bad)}
+td.warn{background:var(--cell-warn)}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:4px;border:1px solid var(--line);white-space:nowrap}
+.b-real{color:var(--good-ink);border-color:var(--good)}
+.b-demo{color:var(--accent-ink);border-color:var(--accent)}
+.b-design{color:var(--warn-ink);border-color:var(--warning)}
+.b-gap{color:var(--critical-ink);border-color:var(--critical)}
+details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:8px 0;background:var(--surface)}
+details summary{cursor:pointer;font-weight:600;font-size:14px}
+.design-label{display:inline-block;margin-bottom:10px;font-size:12px;font-weight:700;color:var(--warn-ink);border:1px dashed var(--warning);border-radius:6px;padding:3px 8px}
+.emailbox{font-size:13px;background:var(--surface-2);border-radius:8px;padding:10px 12px;margin-top:10px;white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace}
+/* stacked tables on phones */
+@media (max-width:640px){
+  table.stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  table.stack,table.stack tbody,table.stack tr,table.stack td{display:block;width:100%}
+  table.stack tr{border:1px solid var(--line);border-radius:8px;margin:0 0 10px;padding:6px 8px;background:var(--surface)}
+  table.stack td{border:0;padding:4px 0 4px 104px;position:relative;white-space:normal;text-align:left;min-height:26px}
+  table.stack td::before{content:attr(data-label);position:absolute;left:0;top:6px;width:96px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  table.stack td.full{padding-left:0}
+  .qwrap{max-height:none!important}
+  table.stack td.num{text-align:left}
+  table.stack td.full{display:block}
+  table.stack td.full::before{content:none}
+  table.stack tr.sel td{background:transparent}
+  table.stack tr.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .kv{grid-template-columns:1fr}
+  .kv dt{margin-top:4px}
+  /* compact cards for the fit table and the case queue */
+  table.stack.fit tr,table.stack.q tr,table.stack.c tr{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:10px}
+  table.stack.fit td,table.stack.q td,table.stack.c td{width:auto;padding:0;min-height:0}
+  table.stack.fit td::before,table.stack.q td::before,table.stack.c td::before{content:none}
+  table.stack.fit td:first-child{flex:1 1 50%;font-weight:600;font-size:14px}
+  table.stack.fit td:last-child{flex:1 1 100%;color:var(--text-2)}
+  table.stack.q td:first-child,table.stack.q td[data-label="Owner"]{flex:1 1 100%}
+  table.stack.q td[data-label="Owner"]::before{content:"Owner: ";position:static;width:auto;font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)}
+  table.stack.q td[data-label="SLA"]{flex:1 1 auto}
+  table.stack.q td.full{margin-left:auto;align-self:flex-end}
+  table.stack.c td[data-label="Line"]::before{content:"Line ";position:static;width:auto;font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)}
+  table.stack.c td[data-label="Legacy ref"],table.stack.c td[data-label="ID"]{font-weight:600}
+  table.stack.c td[data-label="Mapped to"],table.stack.c td[data-label="Issues"],table.stack.c td[data-label="Scenario"],table.stack.c td.full{flex:1 1 100%}
+  table.stack.c td[data-label="Issues"].bad,table.stack.c td[data-label="Issues"].warn{padding:6px 8px;border-radius:6px}
+  table.stack.c td[data-label="Scenario"]{order:2}
+  table.stack.c td[data-label="Level"]{color:var(--muted)}
+  table.stack.c td[data-label="Result"]{margin-left:auto}
+}
+</style>
+</head>
+<body>
+<a class="sr" href="#app" id="skip">Skip to the case app</a>
+<button class="theme-toggle" id="themeBtn" type="button" aria-label="Toggle light or dark theme">◐ Theme</button>
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Concept demo · citizen case management</div>
+  <h1>Housing repairs case management, from first call to closure</h1>
+  <p class="byline"><b>Faizaan Saeed</b> · built for a Power Platform Developer (CRM transformation) application</p>
+  <p class="lede">A fictional council's repairs service as a clickable concept: log a case with validation, work a queue against SLA timers, switch security role and read the audit trail. Then the automations, a legacy CRM migration dry run, and how I'd model it on Dataverse and Dynamics 365 Customer Service.</p>
+  <div class="note"><b>Honest summary:</b> my real delivery is a signed-off Power Apps and Power Automate system on SharePoint Lists (<a href="#fit">section 0</a>). I haven't used Dataverse or Dynamics 365 and I haven't written plugins, so everything marked <span class="badge b-design">Design</span> is how I would build it, not work I've done. The page itself is plain HTML and JavaScript with synthetic data (fictional "Northbrook Council" and NB postcodes, demo clock fixed at Tue 17 Nov 2026 09:00), so it runs without a licence.</div>
+  <a class="cta" href="#app">Try the case app ↓</a>
+  <nav class="toc" aria-label="Sections">
+    <a href="#fit">0 · Fit to the role</a><a href="#app">1 · Case app</a><a href="#flows">2 · Automations</a><a href="#migrate">3 · Legacy migration</a><a href="#design">4 · Dataverse / D365 design</a><a href="#agile">5 · Agile &amp; testing</a>
+  </nav>
+</header>
+
+<section id="fit">
+  <span class="step">0 · Honest fit to the advert</span>
+  <h2>What I've done for real, and what this page shows</h2>
+  <p class="sub">About a year in Power Platform. On a 15-day contract I built a stock-control system for a satellite/RF manufacturer: a 14-screen Power Apps canvas app on 7 SharePoint lists, 6 Power Automate flows, Office Scripts reports and a dashboard, with role-based access, an append-only transaction ledger, 56 versioned releases, test scenarios, UAT and user, admin and technical guides. It was signed off.</p>
+  <div class="card scroll">
+    <table class="stack fit" aria-label="Advert requirements mapped to evidence">
+      <thead><tr><th>Advert asks for</th><th>Status</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td data-label="Asks for">Power Apps</td><td data-label="Status"><span class="badge b-real">Real project</span></td><td data-label="Evidence">14-screen canvas app, 56 versioned releases. This page simulates a model-driven app instead (<a href="#app">section 1</a>).</td></tr>
+        <tr><td data-label="Asks for">Power Automate</td><td data-label="Status"><span class="badge b-real">Real project</span></td><td data-label="Evidence">6 flows plus Office Scripts reports. Case flows simulated in <a href="#flows">section 2</a>.</td></tr>
+        <tr><td data-label="Asks for">Security roles, data modelling, governance</td><td data-label="Status"><span class="badge b-real">Real, on SharePoint</span></td><td data-label="Evidence">Role-based access, a data model across 7 lists and an append-only ledger (no edits or deletes of history), all on SharePoint. Roles are shown live in section 1. Dataverse security roles, business units and teams are design only (<a href="#design">section 4</a>).</td></tr>
+        <tr><td data-label="Asks for">Testing, documentation</td><td data-label="Status"><span class="badge b-real">Real project</span></td><td data-label="Evidence">Test scenarios, UAT, user, admin and technical guides. Sample stories and a self-running test log in <a href="#agile">section 5</a>.</td></tr>
+        <tr><td data-label="Asks for">Case management, CRM transformation</td><td data-label="Status"><span class="badge b-demo">This demo</span></td><td data-label="Evidence">Case lifecycle, SLA queue, assignment and audit (section 1). Not yet delivered on a live CRM programme.</td></tr>
+        <tr><td data-label="Asks for">Legacy CRM migration</td><td data-label="Status"><span class="badge b-demo">This demo</span></td><td data-label="Evidence">Field mapping, data-quality rules and a dry run you can edit (<a href="#migrate">section 3</a>).</td></tr>
+        <tr><td data-label="Asks for">Dataverse, Dynamics 365 CE / Customer Service</td><td data-label="Status"><span class="badge b-design">Design</span></td><td data-label="Evidence">Table model, roles, ALM. My data layer to date has been SharePoint Lists, not Dataverse, and I haven't used Dynamics 365 yet.</td></tr>
+        <tr><td data-label="Asks for">REST APIs</td><td data-label="Status"><span class="badge b-design">Design</span></td><td data-label="Evidence">Postcode lookup as a custom connector, with an OpenAPI 2.0 (Swagger) sketch in <a href="#design">section 4</a>; simulated in the form.</td></tr>
+        <tr><td data-label="Asks for">Azure services</td><td data-label="Status"><span class="badge b-gap">Not yet</span></td><td data-label="Evidence">Not used on a delivery yet. Section 4 only notes where Microsoft Entra ID and Key Vault would fit.</td></tr>
+        <tr><td data-label="Asks for">Plugins, custom components</td><td data-label="Status"><span class="badge b-gap">Not yet</span></td><td data-label="Evidence">I haven't built plugins. I'd use business rules and flows first and pair with the team on C# plugins where they're needed.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="app">
+  <span class="step">1 · The case app (simulated)</span>
+  <h2>Log, triage and work repair cases</h2>
+  <p class="sub">Switch role to see the security model change what you can do. Every permission check runs through one rule function, and the actions themselves re-check it, so hiding a button isn't the only safeguard. Every change writes to the case's audit history.</p>
+
+  <div class="card rolebar">
+    <div>
+      <div class="tag" id="roleLbl">Signed in as</div>
+      <div class="tabs" role="group" aria-labelledby="roleLbl" id="roleBtns"></div>
+      <div class="small muted" id="roleDesc" style="margin-top:6px"></div>
+    </div>
+    <div class="clock" aria-label="Demo clock">
+      <span>Demo clock: <b id="clockTxt"></b></span>
+      <button class="sm" type="button" id="adv4">+4 hours</button>
+      <button class="sm" type="button" id="adv24">+1 day</button>
+      <button class="sm" type="button" id="resetAll">Reset demo</button>
+    </div>
+  </div>
+  <div class="sr" id="live" aria-live="polite" role="status"></div>
+
+  <div class="grid g4" id="kpis" style="margin-bottom:14px"></div>
+
+  <div class="grid gapp">
+    <div class="card" id="queue">
+      <div class="row between">
+        <h3 style="margin:0">Case queue</h3>
+        <div class="row">
+          <label class="sr" for="qView">Queue view</label>
+          <select id="qView" style="width:auto">
+            <option value="open">All open cases</option>
+            <option value="mine">My cases</option>
+            <option value="unassigned">Unassigned</option>
+            <option value="attention">At risk or breached</option>
+            <option value="done">Resolved and closed</option>
+            <option value="all">Everything</option>
+          </select>
+          <label class="sr" for="qSearch">Search cases</label>
+          <input id="qSearch" type="search" placeholder="Search ref, name, postcode" style="flex:1 1 220px;width:auto;max-width:100%">
+        </div>
+      </div>
+      <div class="scroll qwrap" style="margin-top:10px;max-height:520px;overflow:auto">
+        <table class="stack q" aria-label="Case queue, soonest SLA first">
+          <thead><tr><th>Case</th><th>Priority</th><th>Status</th><th>Owner</th><th>SLA</th><th><span class="sr">Open</span></th></tr></thead>
+          <tbody id="qBody"></tbody>
+        </table>
+      </div>
+      <p class="small muted" id="qCount" style="margin:8px 0 0"></p>
+    </div>
+
+    <div class="card" id="detail" aria-labelledby="dTitle">
+      <h3 id="dTitle" tabindex="-1">Case detail</h3>
+      <div id="dBody"><p class="muted small">Choose a case from the queue, or log a new one below.</p></div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:14px">
+    <form class="card" id="newForm" novalidate aria-labelledby="nfTitle">
+      <h3 id="nfTitle">Log a new repair case</h3>
+      <p class="small muted" style="margin:0">Contact-centre form. Fields are validated as you submit; the postcode lookup is a simulated API call.</p>
+      <div class="grid g2" style="gap:0 10px">
+        <div><label for="fName">Citizen name</label><input id="fName" maxlength="60" autocomplete="off" aria-describedby="eName"><div class="err" id="eName"></div></div>
+        <div><label for="fPostcode">Postcode</label><input id="fPostcode" maxlength="9" autocomplete="off" placeholder="e.g. NB2 7DL" aria-describedby="ePostcode hPostcode"><div class="err" id="ePostcode"></div><div class="small muted" id="hPostcode" aria-live="polite"></div></div>
+      </div>
+      <label for="fContact">Email or phone</label><input id="fContact" maxlength="60" autocomplete="off" aria-describedby="eContact"><div class="err" id="eContact"></div>
+      <div class="grid g3" style="gap:0 10px">
+        <div><label for="fCategory">Category</label><select id="fCategory" aria-describedby="eCategory"></select><div class="err" id="eCategory"></div></div>
+        <div><label for="fPriority">Priority</label><select id="fPriority" aria-describedby="ePriority hPriority"></select><div class="err" id="ePriority"></div></div>
+        <div><label for="fChannel">Channel</label><select id="fChannel"></select></div>
+      </div>
+      <div class="small muted" id="hPriority"></div>
+      <label for="fDesc">What's the problem?</label><textarea id="fDesc" rows="3" maxlength="500" aria-describedby="eDesc"></textarea><div class="err" id="eDesc"></div>
+      <label class="inline" id="dupWrap" hidden><input type="checkbox" id="fNotDup"> I've checked: this is not a duplicate of the open case shown</label>
+      <div class="formerr" id="fErr" role="alert"></div>
+      <div class="row"><button class="primary" type="submit" id="fSubmit">Log case</button><button type="button" id="fExample">Fill an example</button></div>
+      <p class="denied" id="fDenied" hidden></p>
+    </form>
+
+    <div class="card">
+      <h3>Who can do what</h3>
+      <p class="small muted" style="margin:0 0 8px">Generated from the same rule function the app uses, checked against sample cases. Closed cases are read-only for everyone.</p>
+      <div class="scroll"><table aria-label="Permission matrix" id="matrix"></table></div>
+      <h3 style="margin-top:14px">Case lifecycle</h3>
+      <p class="small" style="margin:0;color:var(--text-2)">New → Triage → In progress ⇄ Awaiting citizen → Resolved → Closed. Triage can go straight to Resolved (for example, a duplicate or a non-council repair). A resolved case can be reopened by its owner or a team leader; only a team leader can close it. Resolving needs a resolution note. The SLA clock pauses while the case is awaiting the citizen.</p>
+      <h3 style="margin-top:14px">SLA targets</h3>
+      <div class="scroll"><table aria-label="SLA targets" id="slaTable"></table></div>
+      <p class="small muted" style="margin:8px 0 0">These targets are illustrative local policy and run on calendar time. A real service sets its own, usually in working days against a business-hours calendar. The pause while awaiting the citizen is an internal SLA convention; it would not stop a statutory clock.</p>
+      <p class="small muted" style="margin:6px 0 0">Context: in England, Awaab's Law has applied to social landlords since 27 October 2025. It sets legal timescales for emergency hazards (investigated and made safe within 24 hours) and for significant damp and mould. That is why this demo won't let damp and mould be logged as Routine. The actual rules would come from the council's repairs policy and legal advice, not from me.</p>
+    </div>
+  </div>
+</section>
+
+<section id="flows">
+  <span class="step">2 · Automations (simulated)</span>
+  <h2>Power Automate-style flows</h2>
+  <p class="sub">Three flows take the chasing away. The log on the right is a simulation that reacts to what you do in the case app: log a case to see the acknowledgement, advance the demo clock to trigger escalations, or run the weekly summary now.</p>
+  <div class="grid g2 flows">
+    <div class="grid" style="gap:14px">
+      <div class="card"><h3>① Acknowledge new case</h3><div class="trig">Automated: when a Case row is added</div><ol><li>Get the citizen's contact details.</li><li>Email has a reference and target date; a phone-only contact gets a call-back task instead.</li><li>Write "Acknowledgement sent" to the case timeline.</li></ol></div>
+      <div class="card"><h3>② SLA warning and breach escalation</h3><div class="trig">Scheduled: hourly in this demo. On Customer Service, the SLA item's warning and failure actions (a Power Automate flow) would do this instead</div><ol><li>Open cases under 25% of their SLA left: remind the owner (or the team leader if unassigned).</li><li>Breached cases: escalate to the team leader once, and record it on the case.</li></ol></div>
+      <div class="card"><h3>③ Weekly service summary</h3><div class="trig">Scheduled: Mondays 07:00</div><ol><li>Cases opened and resolved in the last 7 days, open backlog, breaches and SLA performance by category.</li><li>Email to the service manager, using the same figures as the tiles above the queue.</li></ol><div class="row" style="margin-top:10px"><button type="button" id="runWeekly">Run weekly summary now</button></div></div>
+    </div>
+    <div class="card"><div class="row between"><h3 style="margin:0">Flow run log</h3><span class="badge b-demo">Simulated</span></div>
+      <ul class="log" id="log" tabindex="0" aria-label="Flow run log, newest first" style="margin-top:10px"></ul>
+      <div id="emailPrev"></div>
+    </div>
+  </div>
+</section>
+
+<section id="migrate">
+  <span class="step">3 · Legacy CRM migration</span>
+  <h2>Dry run: messy legacy cases into the new model</h2>
+  <p class="sub">An export from the old system, as it usually arrives. The dry run maps each row to the new tables, applies data-quality rules and reports what would load cleanly, what would load with a flag for review, and what would be rejected back to the business. Edit the CSV and run it again.</p>
+  <div class="grid g2">
+    <div class="card">
+      <div class="row between"><h3 style="margin:0">Legacy export (CSV)</h3><button class="sm" type="button" id="csvReset">Reset sample</button></div>
+      <label for="csv" class="sr">Legacy CSV</label>
+      <textarea id="csv" rows="14" spellcheck="false" style="font-family:ui-monospace,Consolas,monospace;font-size:12px;margin-top:8px;white-space:pre;overflow-x:auto"></textarea>
+      <div class="row" style="margin-top:8px"><button class="primary" type="button" id="dryRun">Run dry run</button><span class="small muted">Nothing is written; this is a rehearsal.</span></div>
+    </div>
+    <div class="card">
+      <h3>Field mapping</h3>
+      <div class="scroll"><table class="stack" aria-label="Field mapping">
+        <thead><tr><th>Legacy column</th><th>New table.column</th><th>Rule</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Legacy"><code>CASE_NO</code></td><td data-label="Target">Case · legacy reference</td><td data-label="Rule">Kept for traceability. A repeated number is rejected.</td></tr>
+          <tr><td data-label="Legacy"><code>OPENED</code></td><td data-label="Target">Case · created on (migration override)</td><td data-label="Rule">dd/mm/yyyy, yyyy-mm-dd or "3 Mar 2026". Blank, unreadable or future dates are flagged.</td></tr>
+          <tr><td data-label="Legacy"><code>CUST_NAME</code></td><td data-label="Target">Contact · first and last name</td><td data-label="Rule">"SMITH, John" and "john smith" at the same postcode become one contact.</td></tr>
+          <tr><td data-label="Legacy"><code>POSTCODE</code></td><td data-label="Target">Contact · postcode</td><td data-label="Rule">Normalised to "NB1 4QT". Invalid format is flagged.</td></tr>
+          <tr><td data-label="Legacy"><code>CONTACT</code></td><td data-label="Target">Contact · email or phone</td><td data-label="Rule">Routed to email or phone by format.</td></tr>
+          <tr><td data-label="Legacy"><code>TYPE</code></td><td data-label="Target">Case · category (choice)</td><td data-label="Rule">Lookup table of old codes; unknown becomes "Other" and is flagged.</td></tr>
+          <tr><td data-label="Legacy"><code>PRI</code></td><td data-label="Target">Case · priority (choice)</td><td data-label="Rule">P1/P2/P3, high/med/low. Unknown defaults to Routine and is flagged.</td></tr>
+          <tr><td data-label="Legacy"><code>STAT</code></td><td data-label="Target">Case · status and status reason</td><td data-label="Rule">OPN, WIP, HOLD, RES, CLSD. Unknown codes are rejected.</td></tr>
+          <tr><td data-label="Legacy"><code>NOTES</code></td><td data-label="Target">Note (annotation) on the case timeline</td><td data-label="Rule">One note per row, stamped "Migrated".</td></tr>
+        </tbody></table></div>
+      <p class="small muted" style="margin:8px 0 0">Rejected too: rows with no name and no contact details, since there's nobody to link the case to.</p>
+      <p class="small muted" style="margin:6px 0 0"><span class="badge b-design">Design</span> For the real load I'd expect to keep the legacy reference as an alternate key, so a re-run updates rows instead of duplicating them, and to load resolved cases as active and resolve them in a second step. Only the fields the new service needs would move (UK GDPR data minimisation), and rehearsals would use masked or synthetic data. All of this is to confirm with the architect and the chosen migration tool.</p>
+    </div>
+  </div>
+  <div class="grid g4" id="migKpis" style="margin-top:14px"></div>
+  <div class="card" style="margin-top:14px">
+    <div class="row between"><h3 style="margin:0">Dry-run results</h3><span class="small muted" id="migNote"></span></div>
+    <div class="scroll" style="margin-top:8px"><table class="stack c" aria-label="Dry-run results by row">
+      <thead><tr><th>Line</th><th>Legacy ref</th><th>Outcome</th><th>Mapped to</th><th>Issues</th></tr></thead>
+      <tbody id="migBody"></tbody></table></div>
+    <div class="sr" id="migLive" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="design">
+  <span class="step">4 · Dataverse and Dynamics 365 design</span>
+  <h2>How I'd model it on Dataverse and Customer Service</h2>
+  <span class="design-label">Design · not built · details to confirm with the solution architect</span>
+  <p class="sub">The demo above runs in the browser. In the real programme, the same rules would sit on Dataverse with a model-driven app (forms, views, the timeline and a business process flow to guide the stages), using standard Customer Service tables where they fit instead of building custom ones. This section is design worked out from Microsoft's documentation, not from delivery experience, so treat the detail as a starting point for a conversation with the architect.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Table model</h3>
+      <div class="scroll"><table class="stack" aria-label="Table model">
+        <thead><tr><th>Table</th><th>Type</th><th>Purpose and key columns</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Table"><b>Case</b> (incident)</td><td data-label="Type">Standard</td><td data-label="Purpose">One repair request. Title, customer (the standard Customer lookup, a Contact here), category and priority (choices), status and status reason, owner (user or team), property (lookup), legacy reference, SLA KPI lookups.</td></tr>
+          <tr><td data-label="Table"><b>Contact</b></td><td data-label="Type">Standard</td><td data-label="Purpose">The citizen. Name, email, phone, address. Vulnerability notes protected by column-level security.</td></tr>
+          <tr><td data-label="Table"><b>Account</b></td><td data-label="Type">Standard</td><td data-label="Purpose">Organisations: contractors, housing associations, or an advocate reporting for a resident.</td></tr>
+          <tr><td data-label="Table"><b>Property</b></td><td data-label="Type">Custom</td><td data-label="Purpose">UPRN, address, ward, tenure. Lets us see repeat repairs at one address.</td></tr>
+          <tr><td data-label="Table"><b>Notes and activities</b></td><td data-label="Type">Standard</td><td data-label="Purpose">Note (annotation) for free-text notes; activities (email, phone call, task) for dated contact. Both show on the case timeline.</td></tr>
+        </tbody></table></div>
+      <h3 style="margin-top:14px">Relationships</h3>
+      <ul class="issues" style="margin-top:0">
+        <li>Contact 1:N Case through the Customer lookup, which can also point to an Account. Account 1:N Contact.</li>
+        <li>Property 1:N Case, so repeat failures at one address are visible.</li>
+        <li>Case 1:N notes and activities, through Regarding. Case N:1 owner (user or team).</li>
+      </ul>
+      <h3 style="margin-top:14px">Lifecycle mapping</h3>
+      <p class="small" style="margin:0;color:var(--text-2)">A Dataverse case has three statuses (Active, Resolved, Cancelled) with status reasons under each. The demo's New, Triage, In progress and Awaiting citizen would be status reasons under Active, with Awaiting citizen set as an on-hold reason that pauses the SLA. Resolving uses the standard Resolve Case action, which records the resolution, and reopening is Reactivate. The demo's separate team-leader "Closed" check has no direct standard equivalent, so that is a design decision to take with the architect.</p>
+    </div>
+    <div class="card">
+      <h3>Business rules and logic</h3>
+      <ul class="issues" style="margin-top:0">
+        <li><b>Damp and mould</b> can't be logged below Urgent: a business rule with an error message, scoped to the table so it applies on the server as well as on the form.</li>
+        <li><b>Resolution note</b>: captured by the standard Resolve Case dialog, not a custom rule.</li>
+        <li><b>Legacy reference</b> is locked on the form by a business rule. Locking is a form-only action, so writes through the API or an import would need column-level security or a plugin.</li>
+        <li><b>Duplicate detection</b>: a duplicate detection rule on active cases for the same property and category, which the user can review and override. The rule matches on Case columns, so the demo's postcode match would use the property lookup (to confirm).</li>
+        <li><b>SLAs</b>: a Customer Service SLA with a "Resolve by" SLA KPI and an SLA item per priority, each with warning and failure times, business hours from a customer service schedule, and "Allow pause and resume" so on-hold status reasons stop the clock. No hand-built timers like this demo's.</li>
+        <li><b>Where logic lives</b>: business rules for simple validation and form behaviour, Power Automate for notifications and anything that can run after the save, and plugins only where logic must run synchronously inside the save transaction. I haven't written plugins, so that's where I'd pair with an experienced developer.</li>
+      </ul>
+      <h3 style="margin-top:14px">Security roles and team ownership</h3>
+      <div class="scroll"><table class="stack" aria-label="Security roles design">
+        <thead><tr><th>Role</th><th>Case privileges (depth)</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Role">Caseworker</td><td data-label="Privileges">Create. Read at business-unit level. Write, append and assign at user level, so on their own cases. Access to cases their team owns would come through the security role given to that team. The aim is that they can pick up work from the team but not reassign a colleague's case. No delete. (Exact depths and team-role setup to prove with a test user per role.)</td></tr>
+          <tr><td data-label="Role">Team leader</td><td data-label="Privileges">Read, write, assign and share at business-unit level. No delete.</td></tr>
+          <tr><td data-label="Role">Auditor</td><td data-label="Privileges">Read at organisation level, plus the privilege to view audit history. No create, write or delete.</td></tr>
+        </tbody></table></div>
+      <p class="small" style="margin:8px 0 0;color:var(--text-2)">Housing Repairs would be its own business unit, so other council services don't see repairs cases by default. Cases start owned by an owner team per patch (North, South), with a queue for each, until a caseworker picks one up. Security roles are given to teams, not to individuals, so joiners and leavers are a group change. Auditing is on for Case and Contact. Nobody deletes cases by hand; they are resolved or cancelled.</p>
+    </div>
+    <div class="card">
+      <h3>Environments and ALM</h3>
+      <ol class="issues" style="margin-top:0">
+        <li><b>Dev</b>: unmanaged solution with our own publisher prefix; all changes made inside the solution.</li>
+        <li><b>Test / UAT</b>: managed solution, deployed by a pipeline. That is either Power Platform Pipelines (whose target environments must be Managed Environments) or Azure DevOps with the Power Platform Build Tools, whichever the programme uses.</li>
+        <li><b>Production</b>: managed only, with no direct edits. Solution checker runs before every release.</li>
+        <li><b>Environment variables</b> for API URLs and other per-environment settings, and <b>connection references</b> for flows, so nothing is re-pointed by hand after import.</li>
+        <li>Every release versioned, with a release note. On my SharePoint project that meant 56 versioned app releases, not managed solutions, so solution-based ALM would be new to me in practice.</li>
+      </ol>
+      <h3 style="margin-top:14px">Data protection (UK GDPR)</h3>
+      <ul class="issues" style="margin-top:0">
+        <li>Case notes can hold health details, such as a child's asthma. That is special category data, so collect only what the repair needs and keep vulnerability notes behind column-level security.</li>
+        <li>Access is by role and audited, so the council can show who saw and changed a record.</li>
+        <li>Retention follows the council's schedule. Old cases are deleted or anonymised by a scheduled job under that schedule, not by users.</li>
+        <li>Dev and Test hold synthetic or masked data, never a copy of live.</li>
+        <li>The council, as data controller, is responsible for the impact assessment (DPIA) and takes its data protection officer's advice. My part is to supply accurate data flows and the role matrix.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Integration: postcode and address lookup (REST)</h3>
+      <p class="small" style="margin:0;color:var(--text-2)">A custom connector over the council's address API (sketch below; the host is a placeholder). Custom connectors are described in OpenAPI 2.0 (Swagger), which is why the sketch isn't OpenAPI 3. A model-driven form can't call a connector on its own, so the lookup would run in a Power Automate flow when the case is saved, or in a custom page if staff need it as they type (to agree with the architect). The migration would call the same API to validate postcodes. Authentication would be OAuth 2.0 through Microsoft Entra ID, with the client secret held outside the solution, for example in Azure Key Vault. Custom connectors need premium licensing, which Dataverse and Dynamics 365 users normally already have. The form in section 1 simulates this call.</p>
+<pre class="code" tabindex="0" aria-label="OpenAPI 2.0 sketch">swagger: "2.0"
+info: { title: Address lookup (sketch), version: "0.1" }
+host: api.example.org
+basePath: /address/v1
+schemes: [https]
+produces: [application/json]
+paths:
+  /postcodes/{postcode}:
+    get:
+      operationId: LookupPostcode
+      summary: Ward and addresses for a postcode
+      parameters:
+        - { name: postcode, in: path, required: true, type: string }
+      responses:
+        "200":
+          description: Found
+          schema:
+            type: object
+            properties:
+              postcode: { type: string }
+              ward:     { type: string }
+              inArea:   { type: boolean }
+              addresses:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    uprn:  { type: string }
+                    line1: { type: string }
+        "404": { description: Postcode not recognised }</pre>
+    </div>
+  </div>
+</section>
+
+<section id="agile">
+  <span class="step">5 · Agile delivery and testing</span>
+  <h2>Backlog sample and test log</h2>
+  <p class="sub">How I'd write the work up for sprint planning: small user stories with acceptance criteria in Gherkin, so the business analyst, tester and I agree what "done" means. These are samples written for this demo. The unit tests below run live against this page's own logic.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Backlog (sample)</h3>
+      <div id="backlog"></div>
+      <h3 style="margin-top:14px">Definition of done</h3>
+      <ul class="issues" style="margin-top:0">
+        <li>Acceptance criteria pass in Test, and the tester has signed off.</li>
+        <li>Inside the solution, with no unmanaged changes in Test or Production.</li>
+        <li>Security role checked with a test user for each role.</li>
+        <li>User guide and technical notes updated; release note written.</li>
+        <li>Demonstrated at sprint review.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="row between"><h3 style="margin:0">Test log</h3><button class="sm" type="button" id="runTests">Run unit tests again</button></div>
+      <p class="small muted" style="margin:6px 0 8px" id="testSummary" aria-live="polite"></p>
+      <div class="scroll"><table class="stack c" aria-label="Test log">
+        <thead><tr><th>ID</th><th>Level</th><th>Scenario</th><th>Result</th></tr></thead>
+        <tbody id="testBody"></tbody></table></div>
+      <p class="small muted" style="margin:8px 0 0">Unit rows run in your browser when the page loads. SIT and UAT rows are example plan entries showing the format; they weren't run against a real system.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><b>Faizaan Saeed</b>, Power Platform developer, Swindon, UK. About a year in Power Platform. On a 15-day contract I delivered a stock-control system for a satellite/RF manufacturer: a 14-screen Power Apps canvas app on 7 SharePoint lists, 6 Power Automate flows, Office Scripts reports and a dashboard, with role-based access, an append-only ledger, test scenarios, UAT and user, admin and technical guides. It was signed off.</p>
+  <p><a href="https://www.linkedin.com/in/faizaan-saeed-ba96a426b">LinkedIn</a> · <a href="https://saeedfzn.github.io/">Portfolio</a></p>
+  <p class="small muted">Northbrook Council, its people, cases and NB postcodes are fictional, and all data is synthetic. Microsoft, Power Apps, Power Automate, Dataverse, Dynamics 365 and Microsoft Entra are trademarks of the Microsoft group of companies. This is an independent demo, not affiliated with or endorsed by Microsoft.</p>
+</footer>
+</div>
+
+<script id="engine">
+/* Case engine: pure logic, no DOM. The page UI and the unit tests both call these functions. */
+(function(G){
+'use strict';
+const HOUR=36e5, DAY=864e5;
+const STATUSES=['New','Triage','In progress','Awaiting citizen','Resolved','Closed'];
+const isOpen=s=>s!=='Resolved'&&s!=='Closed';
+const FLOW={'New':['Triage'],'Triage':['In progress','Awaiting citizen','Resolved'],'In progress':['Awaiting citizen','Resolved'],'Awaiting citizen':['In progress'],'Resolved':['In progress','Closed'],'Closed':[]};
+const PRIORITIES={Emergency:{hours:24,target:'Make safe within 24 hours'},Urgent:{hours:120,target:'Fix within 5 days'},Routine:{hours:480,target:'Fix within 20 days'}};
+const AT_RISK=0.25;
+const CATEGORIES=['Damp and mould','Heating and hot water','Leak','Electrical','Doors, windows and security','Other'];
+const CHANNELS=['Phone','Web form','Email','Walk-in'];
+const LEADER='Jo Morgan';
+const STAFF=['Sam Patel','Priya Shah','Tom Evans'];
+const ROLES={
+  caseworker:{label:'Caseworker',user:'Sam Patel',desc:'Sam Patel. Logs cases, picks up unassigned ones and works their own. Cannot reassign or close.'},
+  leader:{label:'Team leader',user:LEADER,desc:'Jo Morgan. Can do everything a caseworker can, plus reassign, change priority and close.'},
+  auditor:{label:'Auditor',user:'Internal Audit',desc:'Internal Audit. Read-only: sees every case and its full history, changes nothing.'}
+};
+const WARDS={NB1:'Riverside',NB2:'Castle Hill',NB3:'Meadowbank',NB4:'Ashby Green'};
+
+// ---------- validation ----------
+// Outward code is A9, A99, A9A, AA9, AA99 or AA9A; the last letter allowed differs between A9A and AA9A.
+const PC_RE=/^[A-PR-UWYZ](?:[0-9]{1,2}|[0-9][A-HJKPSTUW]|[A-HK-Y][0-9]{1,2}|[A-HK-Y][0-9][ABEHMNPRV-Y]) [0-9][ABD-HJLNP-UW-Z]{2}$/;
+function normPostcode(s){const t=String(s||'').toUpperCase().replace(/\s+/g,'');if(t.length<5||t.length>7)return null;const p=t.slice(0,-3)+' '+t.slice(-3);return PC_RE.test(p)?p:null;}
+function lookupPostcode(pc){const n=normPostcode(pc);if(!n)return{found:false};const ward=WARDS[n.split(' ')[0]];return{found:true,postcode:n,inArea:!!ward,ward:ward||null};}
+const EMAIL_RE=/^[^\s@,;]+@[^\s@,;]+\.[A-Za-z]{2,}$/;
+function contactType(s){const t=String(s||'').trim();if(EMAIL_RE.test(t))return'email';const d=t.replace(/[\s()-]/g,'');if(/^(?:0\d{9,10}|\+44\d{9,10})$/.test(d))return'phone';return null;}
+
+// ---------- permissions: the one rule function ----------
+function can(role,action,c,to){
+  const no=why=>({ok:false,why}), yes={ok:true,why:''};
+  const r=ROLES[role]; if(!r) return no('Unknown role.');
+  if(action==='view') return yes;
+  if(role==='auditor') return no('Auditors have read-only access.');
+  if(action==='create') return yes;
+  if(!c) return no('No case selected.');
+  if(c.status==='Closed') return no('Closed cases are read-only.');
+  const leader=role==='leader', mine=c.owner===r.user, unassigned=!c.owner;
+  switch(action){
+    case 'assignSelf': return unassigned?yes:no(mine?'This case is already yours.':'Only a team leader can take a case from a colleague.');
+    case 'reassign': return leader?yes:no('Only team leaders can reassign cases.');
+    case 'note': return (leader||mine||unassigned)?yes:no('Only the case owner or a team leader can add notes.');
+    case 'priority': return leader?yes:no('Only team leaders can change priority.');
+    case 'status':
+      if(!FLOW[c.status].includes(to)) return no(`${c.status} can't move straight to ${to}.`);
+      if(to==='Closed'&&!leader) return no('Only a team leader can close a case.');
+      if(!leader&&!mine) return no(unassigned?'Take the case first.':'Only the case owner or a team leader can change its status.');
+      if(unassigned&&to!=='Triage') return no('Assign an owner first.');
+      return yes;
+  }
+  return no('Unknown action.');
+}
+
+// ---------- SLA ----------
+function sla(c,now){
+  const total=PRIORITIES[c.priority].hours*HOUR;
+  if(!isOpen(c.status)) return {state:c.resolvedAt<=c.due?'Met':'Missed',left:c.due-c.resolvedAt,total};
+  if(c.status==='Awaiting citizen') return {state:'Paused',left:c.due-c.pausedAt,total};
+  const left=c.due-now;
+  return {state:left<0?'Breached':left<total*AT_RISK?'At risk':'On track',left,total};
+}
+// Durations: whole units are spelled out ("5 days", "6 hours"); mixed ones stay compact ("1d 6h", "1h 30m").
+function fmtDur(ms){const neg=ms<0;let m=Math.round(Math.abs(ms)/6e4);const d=Math.floor(m/1440);m-=d*1440;let h=Math.floor(m/60);m-=h*60;
+  const pl=(n,w)=>`${n} ${w}${n===1?'':'s'}`;let s;
+  if(d){if(m>=30)h++;s=h===24?pl(d+1,'day'):h?`${d}d ${h}h`:pl(d,'day');}
+  else s=h?(m?`${h}h ${m}m`:pl(h,'hour')):`${m} min`;
+  return neg&&s!=='0 min'?'-'+s:s;}
+
+// ---------- actions (each re-checks permission) ----------
+function audit(c,at,by,role,what){c.audit.push({at,by,role,what});}
+const who=role=>ROLES[role].user, roleLabel=role=>ROLES[role].label;
+function assign(c,role,to,now){
+  const self=to===who(role)&&!c.owner;
+  const p=self?can(role,'assignSelf',c):can(role,'reassign',c); if(!p.ok) return p;
+  if(!STAFF.includes(to)&&to!==LEADER) return {ok:false,why:'Choose a member of the team.'};
+  if(c.owner===to) return {ok:false,why:`Already assigned to ${to}.`};
+  const from=c.owner||'unassigned'; c.owner=to;
+  if(isOpen(c.status)&&sla(c,now).state!=='Breached') c.riskNotified=sla(c,now).state==='At risk'&&c.riskNotified;
+  audit(c,now,who(role),roleLabel(role),`Owner: ${from} → ${to}`); return {ok:true};
+}
+function setStatus(c,role,to,now,note){
+  const p=can(role,'status',c,to); if(!p.ok) return p;
+  note=String(note||'').trim();
+  if(to==='Resolved'&&note.length<5) return {ok:false,why:'Add a resolution note (at least 5 characters) to resolve the case.'};
+  const from=c.status; let extra='';
+  if(from==='Awaiting citizen'){const paused=now-c.pausedAt;c.due+=paused;c.pausedTotal+=paused;c.pausedAt=null;extra=` (SLA clock resumed; ${fmtDur(paused)} added to target)`;}
+  if(to==='Awaiting citizen'){c.pausedAt=now;extra=' (SLA clock paused)';}
+  if(to==='Resolved'){c.resolvedAt=now;}
+  if(from==='Resolved'&&to==='In progress'){c.resolvedAt=null;extra=' (reopened)';}
+  c.status=to; audit(c,now,who(role),roleLabel(role),`Status: ${from} → ${to}${extra}`);
+  if(to==='Resolved'){c.notes.push({at:now,by:who(role),text:'Resolution: '+note});audit(c,now,who(role),roleLabel(role),'Resolution note added');}
+  return {ok:true};
+}
+function addNote(c,role,text,now){
+  const p=can(role,'note',c); if(!p.ok) return p;
+  text=String(text||'').trim(); if(text.length<3) return {ok:false,why:'Write a note of at least 3 characters.'};
+  c.notes.push({at:now,by:who(role),text:text.slice(0,500)}); audit(c,now,who(role),roleLabel(role),'Note added'); return {ok:true};
+}
+function setPriority(c,role,pr,now){
+  const p=can(role,'priority',c); if(!p.ok) return p;
+  if(!PRIORITIES[pr]) return {ok:false,why:'Unknown priority.'};
+  if(pr===c.priority) return {ok:false,why:'That is already the priority.'};
+  if(c.category==='Damp and mould'&&pr==='Routine') return {ok:false,why:'Damp and mould must be at least Urgent.'};
+  const from=c.priority; c.priority=pr; c.due=c.created+PRIORITIES[pr].hours*HOUR+c.pausedTotal;
+  const st=isOpen(c.status)?sla(c,now).state:''; c.breachNotified=st==='Breached'&&c.breachNotified; c.riskNotified=(st==='At risk'||st==='Breached')&&c.riskNotified;
+  audit(c,now,who(role),roleLabel(role),`Priority: ${from} → ${pr} (target recalculated)`); return {ok:true};
+}
+function validateNew(f,cases){
+  const e={}, v={};
+  v.name=String(f.name||'').trim().replace(/\s+/g,' ');
+  if(v.name.length<2||!/[A-Za-z]/.test(v.name)) e.name='Enter the citizen\'s name.';
+  const lk=lookupPostcode(f.postcode);
+  if(!String(f.postcode||'').trim()) e.postcode='Enter a postcode.';
+  else if(!lk.found) e.postcode='Enter a valid UK postcode, for example NB2 7DL.';
+  else if(!lk.inArea) e.postcode='That postcode is outside Northbrook. Check the address, or signpost the caller to their own landlord or council.';
+  else {v.postcode=lk.postcode;v.ward=lk.ward;}
+  v.contact=String(f.contact||'').trim(); v.contactType=contactType(v.contact);
+  if(!v.contact) e.contact='Enter an email address or phone number.';
+  else if(!v.contactType) e.contact='That isn\'t a valid email address or UK phone number.';
+  v.category=f.category; if(!CATEGORIES.includes(v.category)) e.category='Choose a category.';
+  v.priority=f.priority; if(!PRIORITIES[v.priority]) e.priority='Choose a priority.';
+  else if(v.category==='Damp and mould'&&v.priority==='Routine') e.priority='Damp and mould must be at least Urgent.';
+  v.channel=CHANNELS.includes(f.channel)?f.channel:'Phone';
+  v.desc=String(f.desc||'').trim(); if(v.desc.length<15) e.desc='Describe the problem (at least 15 characters).';
+  if(!e.postcode&&!e.category){const d=cases.find(c=>isOpen(c.status)&&c.postcode===v.postcode&&c.category===v.category);
+    if(d){v.dupRef=d.ref; if(!f.notDup) e.dup=`Possible duplicate: ${d.ref} is already open for ${v.postcode} (${v.category}). Check it, or tick the box to log anyway.`;}}
+  return {errors:e,value:v,ok:Object.keys(e).length===0};
+}
+function createCase(f,role,cases,now,seq){
+  const p=can(role,'create'); if(!p.ok) return {ok:false,why:p.why,errors:{}};
+  const r=validateNew(f,cases); if(!r.ok) return {ok:false,errors:r.errors,dupRef:r.value.dupRef};
+  const v=r.value;
+  const c={ref:'NBR-'+seq,name:v.name,postcode:v.postcode,ward:v.ward,contact:v.contact,contactType:v.contactType,category:v.category,priority:v.priority,channel:v.channel,desc:v.desc,
+    status:'New',owner:'',created:now,due:now+PRIORITIES[v.priority].hours*HOUR,pausedAt:null,pausedTotal:0,resolvedAt:null,riskNotified:false,breachNotified:false,notes:[],audit:[],mine:true};
+  audit(c,now,who(role),roleLabel(role),`Case created (${v.channel})${v.dupRef?'; logged despite possible duplicate '+v.dupRef:''}`);
+  return {ok:true,case:c};
+}
+
+// ---------- flows ----------
+function acknowledge(c,now){
+  const target=new Date(c.due);
+  const text=c.contactType==='email'?`acknowledgement emailed to ${c.contact}`:`no email on file: call-back task created to acknowledge by phone`;
+  audit(c,now,'Power Automate','Flow',c.contactType==='email'?'Acknowledgement email sent':'Call-back task created (acknowledgement)');
+  return {flow:'①',ref:c.ref,text,target};
+}
+function slaSweep(cases,now){
+  const ev=[];
+  for(const c of cases){ if(!isOpen(c.status)) continue; const s=sla(c,now).state;
+    if(s==='Breached'&&!c.breachNotified){c.breachNotified=true;c.riskNotified=true;audit(c,now,'Power Automate','Flow',`SLA breached: escalated to ${LEADER}`);ev.push({flow:'②',ref:c.ref,text:`breached its ${c.priority.toLowerCase()} target: escalated to ${LEADER}`});}
+    else if(s==='At risk'&&!c.riskNotified){c.riskNotified=true;const to=c.owner||LEADER;audit(c,now,'Power Automate','Flow',`SLA at risk: reminder sent to ${to}`);ev.push({flow:'②',ref:c.ref,text:`at risk (${fmtDur(sla(c,now).left)} left): reminder to ${to}`});}
+  }
+  return ev;
+}
+function weekly(cases,now){
+  const from=now-7*DAY;
+  const opened=cases.filter(c=>c.created>=from).length;
+  const res=cases.filter(c=>c.resolvedAt&&c.resolvedAt>=from&&!isOpen(c.status));
+  const met=res.filter(c=>c.resolvedAt<=c.due).length;
+  const open=cases.filter(c=>isOpen(c.status));
+  const breached=open.filter(c=>sla(c,now).state==='Breached').length;
+  const byCat=CATEGORIES.map(k=>({k,open:open.filter(c=>c.category===k).length,breached:open.filter(c=>c.category===k&&sla(c,now).state==='Breached').length})).filter(x=>x.open);
+  return {opened,resolved:res.length,met,metPct:res.length?Math.round(100*met/res.length):null,open:open.length,breached,byCat};
+}
+
+// ---------- synthetic seed (deterministic) ----------
+const NAMES=['Amira Hussain','Daniel Brooks','Grace Okafor','Liam Walsh','Mei Chen','Owen Davies','Fatima Begum','Harry Clarke','Zara Ahmed','Ben Turner','Chloe Wright','Kwame Mensah','Ruth Evans','Ioana Popescu','Callum Reid','Sofia Rossi','Arjun Mehta','Niamh Byrne','Joseph Adeyemi','Ellie Marsh','Yusuf Khan','Hollie Grant'];
+const DESC={'Damp and mould':['Black mould spreading on bedroom wall, child with asthma.','Damp patch and mould around bathroom window.','Condensation and mould in kitchen ceiling.'],
+  'Heating and hot water':['No heating or hot water since last night.','Boiler losing pressure every day.','Two radiators cold upstairs.'],
+  'Leak':['Water coming through kitchen ceiling from flat above.','Leak under the bath, floor getting soft.','Dripping overflow pipe outside.'],
+  'Electrical':['Socket in hallway sparking, now switched off.','Lights flicker and trip the fuse box.','Extractor fan not working.'],
+  'Doors, windows and security':['Front door lock broken, cannot secure flat.','Window will not close in living room.','Communal door entry buzzer broken.'],
+  'Other':['Loose handrail on communal stairs.','Kitchen cupboard door hanging off.','Fence panel blown down.']};
+const NOTEBANK=['Spoke to tenant, access agreed for Thursday morning.','Contractor booked; parts on order.','Left voicemail, will try again tomorrow.','Inspected: needs a second visit for parts.'];
+// [category, priority, status, ageHours, owner, pausedAgoHours or resolvedAgoHours]
+const SPECS=[
+  ['Leak','Emergency','New',2,''],['Electrical','Emergency','In progress',20,'Tom Evans'],['Heating and hot water','Emergency','Triage',3,''],
+  ['Damp and mould','Urgent','In progress',130,'Sam Patel'],['Damp and mould','Urgent','Triage',26,'Sam Patel'],['Heating and hot water','Urgent','Awaiting citizen',60,'Priya Shah',20],
+  ['Leak','Urgent','In progress',100,'Priya Shah'],['Doors, windows and security','Urgent','New',5,''],['Doors, windows and security','Routine','In progress',200,'Tom Evans'],
+  ['Other','Routine','New',30,''],['Damp and mould','Urgent','Resolved',150,'Sam Patel',40],['Electrical','Routine','Closed',400,'Tom Evans',100],
+  ['Heating and hot water','Emergency','Closed',70,'Priya Shah',40],['Leak','Routine','Awaiting citizen',300,'Sam Patel',50],['Electrical','Urgent','In progress',50,'Sam Patel'],
+  ['Other','Routine','Triage',400,'Priya Shah'],['Heating and hot water','Routine','In progress',500,'Tom Evans'],['Damp and mould','Urgent','New',1,''],
+  ['Leak','Emergency','Resolved',30,'Tom Evans',10],['Doors, windows and security','Routine','Closed',200,'Sam Patel',20],['Heating and hot water','Urgent','Triage',110,''],
+  ['Other','Urgent','Resolved',90,'Priya Shah',5]
+];
+const INWARD='ABDEFGHJLNPQRSTUWXYZ';
+function seed(now){
+  let s=20261117; const rnd=()=>((s=(s*1664525+1013904223)%4294967296)/4294967296);
+  const cases=SPECS.map((sp,i)=>{
+    const [category,priority,status,age,owner,ago]=sp, t0=now-age*HOUR, name=NAMES[i%NAMES.length];
+    const out='NB'+(1+Math.floor(rnd()*4)), pc=`${out} ${1+Math.floor(rnd()*9)}${INWARD[Math.floor(rnd()*INWARD.length)]}${INWARD[Math.floor(rnd()*INWARD.length)]}`;
+    const email=i%3!==1, [fn,ln]=name.toLowerCase().split(' ');
+    const c={ref:'NBR-'+(24001+i),name,postcode:pc,ward:WARDS[out],contact:email?`${fn}.${ln}@example.com`:`01632 960${String(100+Math.floor(rnd()*899))}`,contactType:email?'email':'phone',
+      category,priority,channel:CHANNELS[Math.floor(rnd()*CHANNELS.length)],desc:DESC[category][Math.floor(rnd()*3)],status:'New',owner:'',created:t0,due:t0+PRIORITIES[priority].hours*HOUR,
+      pausedAt:null,pausedTotal:0,resolvedAt:null,riskNotified:false,breachNotified:false,notes:[],audit:[]};
+    audit(c,t0,'Contact centre','Caseworker',`Case created (${c.channel})`);
+    audit(c,t0+60e3,'Power Automate','Flow',email?'Acknowledgement email sent':'Call-back task created (acknowledgement)');
+    const idx=STATUSES.indexOf(status); const step=Math.min(HOUR,age*HOUR/4);
+    if(owner){c.owner=owner;audit(c,t0+step,LEADER,'Team leader',`Owner: unassigned → ${owner}`);}
+    if(idx>=1){c.status='Triage';audit(c,t0+2*step,owner||LEADER,owner?'Caseworker':'Team leader','Status: New → Triage');}
+    if(idx>=2&&status!=='Triage'){c.status='In progress';audit(c,t0+3*step,owner,'Caseworker','Status: Triage → In progress');
+      c.notes.push({at:t0+3*step+600e3,by:owner,text:NOTEBANK[i%NOTEBANK.length]});audit(c,t0+3*step+600e3,owner,'Caseworker','Note added');}
+    if(status==='Awaiting citizen'){c.pausedAt=now-ago*HOUR;c.status=status;audit(c,c.pausedAt,owner,'Caseworker','Status: In progress → Awaiting citizen (SLA clock paused)');
+      c.notes.push({at:c.pausedAt,by:owner,text:'Asked tenant for photos and a convenient access date.'});audit(c,c.pausedAt,owner,'Caseworker','Note added');}
+    if(status==='Resolved'||status==='Closed'){c.resolvedAt=now-ago*HOUR;c.status='Resolved';audit(c,c.resolvedAt,owner,'Caseworker','Status: In progress → Resolved');
+      c.notes.push({at:c.resolvedAt,by:owner,text:'Resolution: repair completed and tested; tenant confirmed.'});audit(c,c.resolvedAt,owner,'Caseworker','Resolution note added');}
+    if(status==='Closed'){const t=c.resolvedAt+Math.min(ago*HOUR/2,DAY);c.status='Closed';audit(c,t,LEADER,'Team leader','Status: Resolved → Closed (quality check done)');}
+    return c;
+  });
+  return cases;
+}
+
+// ---------- legacy migration ----------
+const SAMPLE_CSV=`CASE_NO,OPENED,CUST_NAME,POSTCODE,CONTACT,TYPE,PRI,STAT,NOTES
+L-1001,03/09/2026,"SMITH, John",nb1 4qt,john.smith@example.com,DAMP,P2,WIP,"Mould in bathroom, tenant has asthma"
+L-1002,2026-09-14,Aisha Karim,NB3 2HX,01632 960411,HEAT,P1,CLSD,Boiler replaced
+L-1003,,Peter Novak,NB2 9RT,p.novak@example.com,LEAK,P2,OPN,Ceiling stain under bathroom
+L-1001,03/09/2026,"SMITH, John",nb1 4qt,john.smith@example.com,DAMP,P2,WIP,"Mould in bathroom, tenant has asthma"
+L-1004,12 Oct 2026,john smith,NB1 4QT,01632 960118,ELEC,med,WIP,Socket sparking in kitchen
+L-1005,31/02/2026,Grace Bell,NB4 1AB,grace.bell@example.com,SEC,P3,HOLD,Back door lock broken
+L-1006,07/10/2026,Omar Farouk,NB9 ZZZ,01632 960733,HEAT,P2,WIP,No hot water
+L-1007,15/10/2026,,,,LEAK,P1,OPN,Anonymous report of a leak
+L-1008,20/10/2026,Hannah Price,N/A,hannah.price@example,DAMP,high,WIP,Black mould in bedroom
+L-1009,22/10/2026,Lee Wong,NB2 5PL,01632 960925,GARDEN,P3,OPN,Fence panel down
+L-1010,25/10/2026,Rosa Diaz,NB3 8EW,rosa.diaz@example.com,LEAK,P2,PENDING,Dripping tap
+L-1011,01/11/2026,Tom Hughes,NB4 6JD,01632 960502,ELEC,,RES,Light fitting replaced
+L-1012,05/12/2026,Nadia Ali,NB1 3GQ,nadia.ali@example.com,HEAT,P1,OPN,Radiators cold
+L-1013,09/11/2026,Chris Doyle,nb2 7dl,chris.doyle@example.com,mould,P2,WIP,Condensation and mould
+L-1014,10/11/2026,"PRICE, Hannah",N/A,01632 960377,DAMP,P2,OPN,Follow-up on L-1008`;
+function parseCSV(text){
+  const rows=[];let row=[],f='',q=false;text=String(text).replace(/\r\n?/g,'\n');
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=ch;}
+    else if(ch==='"')q=true; else if(ch===','){row.push(f);f='';} else if(ch==='\n'){row.push(f);rows.push(row);row=[];f='';} else f+=ch;}
+  row.push(f); if(row.length>1||row[0]!=='') rows.push(row);
+  return rows;
+}
+const MONTHS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function parseDate(s,now){
+  s=String(s||'').trim(); if(!s) return {state:'missing'};
+  let d,m,y,x;
+  if((x=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4}|\d{2})$/))){d=+x[1];m=+x[2];y=+x[3];if(y<100)y+=2000;}
+  else if((x=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))){y=+x[1];m=+x[2];d=+x[3];}
+  else if((x=s.match(/^(\d{1,2}) ([A-Za-z]{3})[A-Za-z]* (\d{4})$/))&&MONTHS[x[2].toLowerCase()]){d=+x[1];m=MONTHS[x[2].toLowerCase()];y=+x[3];}
+  else return {state:'invalid'};
+  const dt=new Date(Date.UTC(y,m-1,d));
+  if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==m-1||dt.getUTCDate()!==d) return {state:'invalid'};
+  if(dt.getTime()>now) return {state:'future',date:dt};
+  return {state:'ok',date:dt};
+}
+const CAT_MAP={DAMP:'Damp and mould','DAMP/MOULD':'Damp and mould',MOULD:'Damp and mould',HEAT:'Heating and hot water',HEATING:'Heating and hot water',BOILER:'Heating and hot water',LEAK:'Leak',PLUMB:'Leak',ELEC:'Electrical',SEC:'Doors, windows and security',DOOR:'Doors, windows and security',WINDOW:'Doors, windows and security',OTHER:'Other'};
+const PRI_MAP={P1:'Emergency',HIGH:'Emergency',EMERGENCY:'Emergency',P2:'Urgent',MED:'Urgent',MEDIUM:'Urgent',URGENT:'Urgent',P3:'Routine',LOW:'Routine',ROUTINE:'Routine'};
+const STAT_MAP={OPN:'New',OPEN:'New',WIP:'In progress',HOLD:'Awaiting citizen',RES:'Resolved',CLSD:'Closed',CLOSED:'Closed'};
+const HEAD=['CASE_NO','OPENED','CUST_NAME','POSTCODE','CONTACT','TYPE','PRI','STAT','NOTES'];
+function cleanName(s){s=String(s||'').trim().replace(/\s+/g,' ');if(s.includes(',')){const [a,b]=s.split(',');s=(b||'').trim()+' '+a.trim();}
+  return s.trim().toLowerCase().replace(/(^|[\s'-])\p{L}/gu,m=>m.toUpperCase());}
+function migrate(text,now){
+  const rows=parseCSV(text); if(!rows.length) return {error:'The CSV is empty.'};
+  const head=rows[0].map(h=>h.trim().toUpperCase()); const missing=HEAD.filter(h=>!head.includes(h));
+  if(missing.length) return {error:'Missing column(s): '+missing.join(', ')+'.'};
+  const col=k=>head.indexOf(k);
+  const seenRef={}, contacts={}, names={}, out=[]; let created=0, merged=0;
+  rows.slice(1).forEach((r,i)=>{
+    const line=i+2, g=k=>String(r[col(k)]??'').trim();
+    if(r.every(x=>!String(x).trim())) return;
+    const ref=g('CASE_NO'), issues=[]; let outcome='Migrated', mapped='';
+    const name=cleanName(g('CUST_NAME')), pc=normPostcode(g('POSTCODE')), ct=contactType(g('CONTACT')), stat=STAT_MAP[g('STAT').toUpperCase()];
+    if(!ref){outcome='Rejected';issues.push('No legacy case number.');}
+    else if(seenRef[ref]){outcome='Rejected';issues.push(`Duplicate of line ${seenRef[ref]} (same CASE_NO).`);}
+    else if(!name&&!g('CONTACT')){outcome='Rejected';issues.push('No name or contact details: nobody to link the case to.');}
+    else if(!stat){outcome='Rejected';issues.push(`Unknown status code "${g('STAT')||'(blank)'}".`);}
+    if(ref&&!seenRef[ref]) seenRef[ref]=line;
+    if(outcome!=='Rejected'){
+      const dt=parseDate(g('OPENED'),now);
+      if(dt.state==='missing') issues.push('Opened date missing: left blank for review.');
+      else if(dt.state==='invalid') issues.push(`Opened date "${g('OPENED')}" isn't a real date.`);
+      else if(dt.state==='future') issues.push(`Opened date "${g('OPENED')}" is in the future.`);
+      if(!g('POSTCODE')) issues.push('Postcode missing.'); else if(!pc) issues.push(`Invalid postcode "${g('POSTCODE')}".`);
+      if(!name) issues.push('No name: contact created from contact details only.');
+      if(!ct) issues.push('No valid email or phone.');
+      let cat=CAT_MAP[g('TYPE').toUpperCase()]; if(!cat){cat='Other';issues.push(`Unknown type "${g('TYPE')||'(blank)'}": set to Other.`);}
+      let pri=PRI_MAP[g('PRI').toUpperCase()]; if(!pri){pri='Routine';issues.push(`Priority "${g('PRI')||'(blank)'}" not recognised: set to Routine.`);}
+      let contactNote='new contact';
+      const nk=name.toLowerCase().split(' ').filter(Boolean).sort().join(' ');
+      if(pc&&nk&&contacts[nk+'|'+pc]){merged++;contactNote=`contact merged with line ${contacts[nk+'|'+pc]}`;}
+      else{created++; if(pc&&nk) contacts[nk+'|'+pc]=line;
+        if(!pc&&nk&&names[nk]) issues.push(`Possible duplicate contact (line ${names[nk]}): not merged without a valid postcode.`);}
+      if(nk&&!names[nk]) names[nk]=line;
+      mapped=`${stat} · ${cat} · ${pri} · ${contactNote}`;
+      if(issues.length) outcome='Flagged';
+    }
+    out.push({line,ref:ref||'(blank)',outcome,issues,mapped});
+  });
+  const n=k=>out.filter(x=>x.outcome===k).length;
+  return {rows:out,counts:{migrated:n('Migrated'),flagged:n('Flagged'),rejected:n('Rejected'),total:out.length},contacts:{created,merged}};
+}
+
+// ---------- unit tests (run in the page and in Node) ----------
+function runTests(){
+  const NOW=Date.UTC(2026,10,17,9), T=[];
+  const t=(id,name,fn)=>{let ok=false,detail='';try{const r=fn();ok=r===true;if(!ok)detail=typeof r==='string'?r:'returned '+JSON.stringify(r);}catch(e){detail=e.message;}T.push({id,level:'Unit',name,ok,detail});};
+  const base={name:'Test Person',postcode:'nb2 7dl',contact:'test@example.com',category:'Leak',priority:'Urgent',channel:'Phone',desc:'Water dripping from the ceiling light.'};
+  const mk=(o={},role='caseworker',list=[])=>createCase({...base,...o},role,list,NOW,90001);
+  t('U01','Postcodes are normalised and validated',()=>normPostcode('nb1  4qt')==='NB1 4QT'&&normPostcode('NB1 4Q')===null&&normPostcode('12345')===null&&normPostcode('SW1A1AA')==='SW1A 1AA'&&normPostcode('ec1m4aa')==='EC1M 4AA'&&normPostcode('WC2N 5DU')==='WC2N 5DU'&&normPostcode('M1 1AE')==='M1 1AE'&&normPostcode('NB9 ZZZ')===null);
+  t('U02','Out-of-area postcode is refused with signposting',()=>/outside Northbrook/.test(validateNew({...base,postcode:'SW1A 1AA'},[]).errors.postcode||''));
+  t('U03','Blank form reports every required field',()=>{const e=validateNew({},[]).errors;return ['name','postcode','contact','category','priority','desc'].every(k=>e[k])||JSON.stringify(Object.keys(e));});
+  t('U04','Damp and mould cannot be logged as Routine',()=>!!validateNew({...base,category:'Damp and mould',priority:'Routine'},[]).errors.priority);
+  t('U05','Duplicate open case is blocked until confirmed',()=>{const a=mk().case;const b=mk({},'caseworker',[a]);const c2=mk({notDup:true},'caseworker',[a]);return !b.ok&&!!b.errors.dup&&c2.ok;});
+  t('U06','Lifecycle: New cannot jump to Resolved',()=>{const c=mk().case;assign(c,'leader','Sam Patel',NOW);return setStatus(c,'leader','Resolved',NOW,'done and dusted').ok===false&&c.status==='New';});
+  t('U07','Auditor cannot create, note, assign or change status',()=>{const c=mk().case;return !createCase(base,'auditor',[],NOW,1).ok&&!addNote(c,'auditor','hello there',NOW).ok&&!assign(c,'auditor','Tom Evans',NOW).ok&&!setStatus(c,'auditor','Triage',NOW).ok&&c.audit.length===1;});
+  t('U08','Caseworker cannot reassign a colleague\'s case',()=>{const c=mk().case;assign(c,'leader','Priya Shah',NOW);const r=assign(c,'caseworker','Sam Patel',NOW);return !r.ok&&c.owner==='Priya Shah';});
+  t('U09','Caseworker can take an unassigned case; team leader can reassign',()=>{const c=mk().case;const a=assign(c,'caseworker','Sam Patel',NOW);const b=assign(c,'leader','Tom Evans',NOW);return a.ok&&b.ok&&c.owner==='Tom Evans';});
+  t('U10','Resolving needs a resolution note',()=>{const c=mk().case;assign(c,'caseworker','Sam Patel',NOW);setStatus(c,'caseworker','Triage',NOW);setStatus(c,'caseworker','In progress',NOW);return !setStatus(c,'caseworker','Resolved',NOW,'').ok&&setStatus(c,'caseworker','Resolved',NOW,'Washer replaced').ok&&c.notes.length===1;});
+  t('U11','Only a team leader can close a case',()=>{const c=mk().case;assign(c,'caseworker','Sam Patel',NOW);['Triage','In progress'].forEach(s=>setStatus(c,'caseworker',s,NOW));setStatus(c,'caseworker','Resolved',NOW,'Fixed it today');return !setStatus(c,'caseworker','Closed',NOW).ok&&setStatus(c,'leader','Closed',NOW).ok&&!addNote(c,'leader','after close',NOW).ok;});
+  t('U12','SLA clock pauses while awaiting the citizen',()=>{const c=mk().case;assign(c,'caseworker','Sam Patel',NOW);setStatus(c,'caseworker','Triage',NOW);const due0=c.due;setStatus(c,'caseworker','Awaiting citizen',NOW);const p=sla(c,NOW+50*HOUR).state;setStatus(c,'caseworker','In progress',NOW+50*HOUR);return p==='Paused'&&c.due===due0+50*HOUR;});
+  t('U13','SLA moves from on track to at risk to breached',()=>{const c=mk({priority:'Emergency'}).case;return sla(c,NOW+HOUR).state==='On track'&&sla(c,NOW+19*HOUR).state==='At risk'&&sla(c,NOW+25*HOUR).state==='Breached';});
+  t('U14','Breach escalation fires once per case',()=>{const c=mk({priority:'Emergency'}).case;const a=slaSweep([c],NOW+25*HOUR).length,b=slaSweep([c],NOW+30*HOUR).length;return a===1&&b===0&&c.breachNotified;});
+  t('U15','Every change writes an audit entry',()=>{const c=mk().case;const n0=c.audit.length;assign(c,'caseworker','Sam Patel',NOW);addNote(c,'caseworker','Called tenant',NOW);setStatus(c,'caseworker','Triage',NOW);setPriority(c,'leader','Emergency',NOW);return c.audit.length===n0+4;});
+  t('U16','Migration dry run: 4 migrated, 8 flagged, 3 rejected; 11 contacts (1 merged)',()=>{const m=migrate(SAMPLE_CSV,NOW);const k=m.counts;return (k.migrated===4&&k.flagged===8&&k.rejected===3&&m.contacts.created===11&&m.contacts.merged===1)||JSON.stringify([k,m.contacts]);});
+  t('U17','Durations read cleanly and never show "5d 0h" or "60m"',()=>{const r=[fmtDur(120*HOUR),fmtDur(30*HOUR),fmtDur(6*HOUR),fmtDur(90*6e4),fmtDur(1.9999*HOUR),fmtDur(HOUR*23+59.7*6e4),fmtDur(24*HOUR),fmtDur(-240*HOUR),fmtDur(45*6e4)].join('|');return r==='5 days|1d 6h|6 hours|1h 30m|2 hours|1 day|1 day|-10 days|45 min'||r;});
+  return T;
+}
+
+G.CaseEngine={HOUR,DAY,STATUSES,FLOW,PRIORITIES,AT_RISK,CATEGORIES,CHANNELS,ROLES,STAFF,LEADER,WARDS,isOpen,normPostcode,lookupPostcode,contactType,can,sla,fmtDur,assign,setStatus,addNote,setPriority,validateNew,createCase,acknowledge,slaSweep,weekly,seed,SAMPLE_CSV,parseCSV,parseDate,migrate,runTests};
+})(typeof window!=='undefined'?window:globalThis);
+</script>
+<script>
+window.__errors=[];window.addEventListener('error',e=>window.__errors.push(String(e.message)));
+(function(){
+'use strict';
+const E=window.CaseEngine, $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const START=new Date('2026-11-17T09:00:00').getTime();
+const fmt=ts=>new Date(ts).toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).replace(',','');
+const fmtDay=ts=>new Date(ts).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+
+// ---------- theme ----------
+const root=document.documentElement;
+$('themeBtn').addEventListener('click',()=>{const dark=root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;root.dataset.theme=dark?'light':'dark';});
+
+// ---------- status visuals: colour + icon + label ----------
+const ST_UI={'New':['var(--accent)','✚'],'Triage':['var(--serious)','⚑'],'In progress':['var(--accent)','▶'],'Awaiting citizen':['var(--muted)','⏸'],'Resolved':['var(--good)','✓'],'Closed':['var(--muted)','■']};
+const SLA_UI={'On track':['var(--good)','✓'],'At risk':['var(--warning)','⚠'],'Breached':['var(--critical)','✕'],'Paused':['var(--muted)','⏸'],'Met':['var(--good)','✓'],'Missed':['var(--critical)','✕']};
+const PR_UI={Emergency:['var(--critical)','▲'],Urgent:['var(--serious)','◆'],Routine:['var(--muted)','○']};
+const pill=(m,k,extra)=>{const [c,i]=m[k]||['var(--muted)','•'];return `<span class="pill"><span class="dot" style="background:${c}" aria-hidden="true"></span><span aria-hidden="true">${i}</span> ${esc(k)}${extra?' '+extra:''}</span>`;};
+function slaText(c,now){const s=E.sla(c,now);
+  if(s.state==='Breached') return `${E.fmtDur(-s.left)} overdue`;
+  if(s.state==='Paused') return s.left<0?'paused, was overdue':`paused, ${E.fmtDur(s.left)} left`;
+  if(s.state==='Met') return 'resolved in time';
+  if(s.state==='Missed') return `resolved ${E.fmtDur(-s.left)} late`;
+  return `${E.fmtDur(s.left)} left`;}
+
+// ---------- state ----------
+let S;
+function fresh(){S={role:'caseworker',now:START,cases:E.seed(START),seq:24101,sel:null,log:[],exampleN:0};
+  const ev=E.slaSweep(S.cases,S.now); ev.forEach(x=>logFlow(x.flow,x.ref,x.text,'hourly run')); }
+function announce(m){const l=$('live');l.textContent='';setTimeout(()=>{l.textContent=m;},30);}
+function logFlow(flow,ref,text,tag){S.log.unshift({at:S.now,flow,ref,text,tag});if(S.log.length>80)S.log.length=80;}
+function renderLog(){$('log').innerHTML=S.log.length?S.log.map(l=>`<li><b>${esc(fmt(l.at))}</b> Flow ${esc(l.flow)}${l.tag?' ('+esc(l.tag)+')':''}${l.ref?' · <b>'+esc(l.ref)+'</b>':''} ${esc(l.text)}</li>`).join(''):'<li>No runs yet.</li>';}
+
+// ---------- role switcher ----------
+function renderRoles(){
+  $('roleBtns').innerHTML=Object.entries(E.ROLES).map(([k,r])=>`<button type="button" class="sm" data-role="${k}" aria-pressed="${S.role===k}">${esc(r.label)}</button>`).join('');
+  $('roleDesc').textContent=E.ROLES[S.role].desc;
+  const cr=E.can(S.role,'create');
+  $('fSubmit').disabled=!cr.ok; $('fDenied').hidden=cr.ok; $('fDenied').textContent=cr.ok?'':'⛔ '+cr.why+' The form is shown so you can see it, but it cannot be submitted.';
+  $('qView').querySelector('option[value="mine"]').disabled=S.role==='auditor';
+  if(S.role==='auditor'&&$('qView').value==='mine') $('qView').value='open';
+}
+$('roleBtns').addEventListener('click',e=>{const b=e.target.closest('button[data-role]');if(!b)return;S.role=b.dataset.role;renderAll();$('roleBtns').querySelector('[aria-pressed="true"]').focus();announce(`Signed in as ${E.ROLES[S.role].label}. ${E.ROLES[S.role].desc}`);});
+
+// ---------- clock ----------
+function advance(h){S.now+=h*E.HOUR;const ev=E.slaSweep(S.cases,S.now);ev.forEach(x=>logFlow(x.flow,x.ref,x.text,'hourly run'));renderAll();
+  announce(`Clock moved to ${fmt(S.now)}. ${ev.length?ev.length+' SLA flow action'+(ev.length>1?'s':'')+' in the run log.':'No new SLA warnings.'}`);}
+$('adv4').addEventListener('click',()=>advance(4));$('adv24').addEventListener('click',()=>advance(24));
+$('resetAll').addEventListener('click',()=>{fresh();$('emailPrev').innerHTML='';$('qView').value='open';$('qSearch').value='';$('newForm').reset();clearErrs();$('dupWrap').hidden=true;$('hPostcode').textContent='';priHint();renderAll();announce('Demo reset to Tuesday 17 November, 09:00.');});
+
+// ---------- KPIs ----------
+function renderKpis(){
+  const open=S.cases.filter(c=>E.isOpen(c.status)), st=c=>E.sla(c,S.now).state;
+  const br=open.filter(c=>st(c)==='Breached').length, ar=open.filter(c=>st(c)==='At risk').length, un=open.filter(c=>!c.owner).length;
+  const k=[[open.length,'Open cases',''],[un,'Unassigned',''],[`<span style="color:var(--warn-ink)">⚠ ${ar}</span>`,'At risk (under 25% of SLA left)',''],[`<span style="color:${br?'var(--critical-ink)':'var(--good-ink)'}">${br?'✕':'✓'} ${br}</span>`,'Breached SLA','']];
+  $('kpis').innerHTML=k.map(x=>`<div class="card kpi"><div class="v">${x[0]}</div><div class="l">${x[1]}</div></div>`).join('');
+}
+
+// ---------- queue ----------
+function queueRows(){
+  const v=$('qView').value, q=$('qSearch').value.trim().toLowerCase(), me=E.ROLES[S.role].user;
+  let rows=S.cases.filter(c=>{
+    if(v==='open'&&!E.isOpen(c.status))return false;
+    if(v==='mine'&&!(c.owner===me&&E.isOpen(c.status)))return false;
+    if(v==='unassigned'&&!(E.isOpen(c.status)&&!c.owner))return false;
+    if(v==='attention'&&!(E.isOpen(c.status)&&['At risk','Breached'].includes(E.sla(c,S.now).state)))return false;
+    if(v==='done'&&E.isOpen(c.status))return false;
+    if(q&&![c.ref,c.name,c.postcode,c.category,c.owner].join(' ').toLowerCase().includes(q))return false;
+    return true;});
+  const rank=c=>!E.isOpen(c.status)?3:c.status==='Awaiting citizen'?2:1;
+  rows.sort((a,b)=>rank(a)-rank(b)||(rank(a)===3?b.resolvedAt-a.resolvedAt:E.sla(a,S.now).left-E.sla(b,S.now).left));
+  return rows;
+}
+function renderQueue(){
+  const rows=queueRows();
+  $('qBody').innerHTML=rows.map(c=>{const s=E.sla(c,S.now);return `<tr${c.ref===S.sel?' class="sel"':''}>
+    <td data-label="Case"><b class="nw">${esc(c.ref)}</b>${c.mine?' <span class="tag">new</span>':''}<div class="small muted">${esc(c.name)} · ${esc(c.category)}</div></td>
+    <td data-label="Priority">${pill(PR_UI,c.priority)}</td>
+    <td data-label="Status">${pill(ST_UI,c.status)}</td>
+    <td data-label="Owner" class="nw">${c.owner?esc(c.owner):'<span class="muted">Unassigned</span>'}</td>
+    <td data-label="SLA">${pill(SLA_UI,s.state)}<div class="small muted">${esc(slaText(c,S.now))}</div></td>
+    <td data-label="" class="full nw"><button type="button" class="sm" data-open="${esc(c.ref)}" aria-label="Open case ${esc(c.ref)}">Open</button></td></tr>`;}).join('')
+    ||'<tr><td colspan="6" class="full muted">No cases match this view.</td></tr>';
+  $('qCount').textContent=`${rows.length} case${rows.length===1?'':'s'} shown, soonest SLA first. Times use the demo clock.`;
+}
+$('qView').addEventListener('change',renderQueue);$('qSearch').addEventListener('input',renderQueue);
+$('qBody').addEventListener('click',e=>{const b=e.target.closest('button[data-open]');if(!b)return;S.sel=b.dataset.open;renderQueue();renderDetail();$('dTitle').focus();if(innerWidth<860)$('detail').scrollIntoView({block:'start'});});
+
+// ---------- detail ----------
+function reasons(list){const u=[...new Set(list.filter(Boolean))];return u.length?`<p class="denied">⛔ ${u.map(esc).join(' ')}</p>`:'';}
+function renderDetail(msg){
+  const c=S.cases.find(x=>x.ref===S.sel);
+  if(!c){$('dTitle').textContent='Case detail';$('dBody').innerHTML='<p class="muted small">Choose a case from the queue, or log a new one below.</p>';return;}
+  const s=E.sla(c,S.now), role=S.role, me=E.ROLES[role].user;
+  const oldNote=$('dNote'), draft=oldNote&&$('dBody').dataset.ref===c.ref?oldNote.value:'';
+  $('dTitle').textContent=`${c.ref} · ${c.category}`;
+  const idx=E.STATUSES.indexOf(c.status);
+  const lane=E.STATUSES.map((st,i)=>`<span class="${i===idx?'on':i<idx?'done':''}"${i===idx?' aria-current="step"':''}>${esc(st)}</span>`).join('<span aria-hidden="true" style="border:0;padding:0">→</span>');
+  // assignment
+  const aSelf=E.can(role,'assignSelf',c), aRe=E.can(role,'reassign',c);
+  let assignHtml='';
+  if(aSelf.ok) assignHtml+=`<button type="button" class="sm" data-act="take">Take this case</button>`;
+  assignHtml+=`<label class="sr" for="dAssign">Reassign to</label><select id="dAssign" style="width:auto" ${aRe.ok?'':'disabled'}>${[...E.STAFF,E.LEADER].map(p=>`<option${p===c.owner?' selected':''}>${esc(p)}</option>`).join('')}</select><button type="button" class="sm" data-act="reassign" ${aRe.ok?'':'disabled'}>Reassign</button>`;
+  const assignWhy=[aRe.ok?'':aRe.why];
+  // status
+  const nexts=E.FLOW[c.status], st=nexts.map(t=>({t,p:E.can(role,'status',c,t)}));
+  const stHtml=nexts.length?st.map(x=>`<button type="button" class="sm" data-act="status" data-to="${esc(x.t)}" ${x.p.ok?'':'disabled'}>${x.t==='In progress'&&c.status==='Resolved'?'Reopen':'→ '+esc(x.t)}</button>`).join(''):'<span class="small muted">No further status changes.</span>';
+  // priority
+  const pr=E.can(role,'priority',c);
+  const prHtml=`<label class="sr" for="dPri">Priority</label><select id="dPri" style="width:auto" ${pr.ok?'':'disabled'}>${Object.keys(E.PRIORITIES).map(p=>`<option${p===c.priority?' selected':''}>${p}</option>`).join('')}</select><button type="button" class="sm" data-act="priority" ${pr.ok?'':'disabled'}>Set priority</button>`;
+  const nt=E.can(role,'note',c);
+  $('dBody').innerHTML=`
+    <div class="row">${pill(PR_UI,c.priority)} ${pill(ST_UI,c.status)} ${pill(SLA_UI,s.state)} <span class="small muted">${esc(slaText(c,S.now))}</span></div>
+    <div class="lane" aria-label="Lifecycle stage">${lane}</div>
+    <dl class="kv">
+      <dt>Citizen</dt><dd>${esc(c.name)}</dd>
+      <dt>Contact</dt><dd>${esc(c.contact)} <span class="muted small">(${esc(c.contactType)})</span></dd>
+      <dt>Postcode</dt><dd>${esc(c.postcode)} · ${esc(c.ward)} ward</dd>
+      <dt>Logged</dt><dd>${esc(fmt(c.created))} by ${esc(c.channel.toLowerCase())}</dd>
+      <dt>SLA target</dt><dd>${esc(fmt(c.status==='Awaiting citizen'?c.due+(S.now-c.pausedAt):c.due))} <span class="small muted">(${esc(E.PRIORITIES[c.priority].target.toLowerCase())}${c.pausedTotal?'; includes '+esc(E.fmtDur(c.pausedTotal))+' paused':''})</span></dd>
+      <dt>Owner</dt><dd>${c.owner?esc(c.owner):'<span class="muted">Unassigned</span>'}${c.owner===me?' <span class="tag">you</span>':''}</dd>
+    </dl>
+    <p style="margin:0 0 10px;font-size:14px">${esc(c.desc)}</p>
+    <div class="formerr" id="dErr" role="alert">${msg?esc(msg):''}</div>
+    <h3 style="margin-top:6px">Owner</h3><div class="row">${assignHtml}</div>${reasons(assignWhy)}
+    <h3 style="margin-top:12px">Status</h3><div class="row">${stHtml}</div>${reasons(st.filter(x=>!x.p.ok).map(x=>x.p.why))}
+    <h3 style="margin-top:12px">Priority</h3><div class="row">${prHtml}</div>${reasons([pr.ok?'':pr.why])}
+    <h3 style="margin-top:12px">Notes (${c.notes.length})</h3>
+    <ul class="notes">${c.notes.slice().reverse().map(n=>`<li><div class="small muted">${esc(fmt(n.at))} · ${esc(n.by)}</div>${esc(n.text)}</li>`).join('')||'<li class="muted">No notes yet.</li>'}</ul>
+    <label for="dNote">Add a note${c.status==='Resolved'||!nexts.includes('Resolved')?'':' (also used as the resolution note when you resolve)'}</label>
+    <textarea id="dNote" rows="2" maxlength="500" ${nt.ok?'':'disabled'}></textarea>
+    <div class="row" style="margin-top:6px"><button type="button" class="sm" data-act="note" ${nt.ok?'':'disabled'}>Add note</button></div>${reasons([nt.ok?'':nt.why])}
+    <h3 style="margin-top:14px">Audit history (${c.audit.length})</h3>
+    <ul class="audit" tabindex="0" aria-label="Audit history, newest first">${c.audit.slice().reverse().map(a=>`<li><b>${esc(fmt(a.at))}</b> · ${esc(a.by)} <span class="muted">(${esc(a.role)})</span><br>${esc(a.what)}</li>`).join('')}</ul>
+    <p class="small muted" style="margin:6px 0 0">Append-only: entries can't be edited or deleted, by any role.</p>
+    <p class="backq small"><a href="#queue">↑ Back to the queue</a></p>`;
+  $('dBody').dataset.ref=c.ref; if(draft&&nt.ok) $('dNote').value=draft;
+}
+$('dBody').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-act]');if(!b)return;
+  const c=S.cases.find(x=>x.ref===S.sel);if(!c)return;
+  const act=b.dataset.act, me=E.ROLES[S.role].user; let r, done='';
+  if(act==='take'){r=E.assign(c,S.role,me,S.now);done=`${c.ref} assigned to you.`;}
+  else if(act==='reassign'){const to=$('dAssign').value;r=E.assign(c,S.role,to,S.now);done=`${c.ref} reassigned to ${to}.`;}
+  else if(act==='status'){const to=b.dataset.to;r=E.setStatus(c,S.role,to,S.now,$('dNote').value);done=`${c.ref} moved to ${to}.`;}
+  else if(act==='priority'){const p=$('dPri').value;r=E.setPriority(c,S.role,p,S.now);done=`${c.ref} priority set to ${p}.`;}
+  else if(act==='note'){r=E.addNote(c,S.role,$('dNote').value,S.now);done=`Note added to ${c.ref}.`;}
+  if(!r.ok){renderDetail(r.why);announce(r.why);
+    // the buttons were re-rendered, so put focus back: on the note box if a note is what's missing, else on the same button
+    const again=/note/i.test(r.why)?$('dNote'):$('dBody').querySelector(`button[data-act="${act}"]${b.dataset.to?`[data-to="${b.dataset.to}"]`:''}`);
+    (again&&!again.disabled?again:$('dTitle')).focus();return;}
+  if(act==='note'||(act==='status'&&b.dataset.to==='Resolved')) $('dNote').value='';
+  const ev=E.slaSweep([c],S.now);ev.forEach(x=>logFlow(x.flow,x.ref,x.text,'on change'));
+  renderAll();announce(done);$('dTitle').focus();
+});
+
+// ---------- matrix and SLA table ----------
+function renderMatrix(){
+  const mk=(status,owner)=>({ref:'X',status,owner,priority:'Urgent',category:'Leak'});
+  const U=mk('Triage',''),O=mk('In progress','Sam Patel'),C=mk('In progress','Priya Shah'),R=mk('Resolved','Sam Patel'),X=mk('Closed','Sam Patel');
+  const rows=[['View cases and audit history',r=>E.can(r,'view')],['Log a new case',r=>E.can(r,'create')],['Take an unassigned case',r=>E.can(r,'assignSelf',U)],
+    ['Update a case they own',r=>E.can(r,'status',O,'Awaiting citizen')],['Update a colleague\'s case',r=>E.can(r,'status',C,'Awaiting citizen')],
+    ['Reassign a case',r=>E.can(r,'reassign',C)],['Change priority',r=>E.can(r,'priority',O)],['Close a resolved case',r=>E.can(r,'status',R,'Closed')],['Edit a closed case',r=>E.can(r,'note',X)]];
+  const roles=Object.keys(E.ROLES);
+  $('matrix').innerHTML=`<thead><tr><th>Action</th>${roles.map(r=>`<th class="nw"${r===S.role?' style="color:var(--accent-ink)"':''}>${esc(E.ROLES[r].label)}</th>`).join('')}</tr></thead><tbody>`+
+    rows.map(([l,f])=>`<tr><td>${esc(l)}</td>${roles.map(r=>{const p=f(r);return `<td class="nw" title="${esc(p.why)}">${p.ok?'<span style="color:var(--good-ink)">✓ Yes</span>':'<span style="color:var(--critical-ink)">✕ No</span>'}</td>`;}).join('')}</tr>`).join('')+'</tbody>';
+  $('slaTable').innerHTML='<thead><tr><th>Priority</th><th>Target</th><th>At risk when</th></tr></thead><tbody>'+Object.entries(E.PRIORITIES).map(([k,p])=>`<tr><td class="nw">${pill(PR_UI,k)}</td><td>${esc(p.target)}</td><td>under ${E.fmtDur(p.hours*E.HOUR*E.AT_RISK)} left</td></tr>`).join('')+'</tbody>';
+}
+
+// ---------- new case form ----------
+const F={name:'fName',postcode:'fPostcode',contact:'fContact',category:'fCategory',priority:'fPriority',desc:'fDesc'};
+$('fCategory').innerHTML='<option value="">Choose…</option>'+E.CATEGORIES.map(c=>`<option>${esc(c)}</option>`).join('');
+$('fPriority').innerHTML='<option value="">Choose…</option>'+Object.keys(E.PRIORITIES).map(p=>`<option>${p}</option>`).join('');
+$('fChannel').innerHTML=E.CHANNELS.map(c=>`<option>${esc(c)}</option>`).join('');
+function priHint(){const p=$('fPriority').value,cat=$('fCategory').value;$('hPriority').textContent=(p?E.PRIORITIES[p].target+'. ':'')+(cat==='Damp and mould'?'Damp and mould must be Urgent or Emergency.':'');}
+['fPriority','fCategory'].forEach(i=>$(i).addEventListener('change',priHint));
+$('fPostcode').addEventListener('blur',()=>{const v=$('fPostcode').value.trim();if(!v){$('hPostcode').textContent='';return;}
+  const r=E.lookupPostcode(v);$('hPostcode').textContent=!r.found?'':r.inArea?`Lookup (simulated API): ${r.postcode}, ${r.ward} ward ✓`:`Lookup (simulated API): ${r.postcode} is outside Northbrook`;if(r.found)$('fPostcode').value=r.postcode;});
+function clearErrs(){Object.entries(F).forEach(([k,id])=>{$(id).removeAttribute('aria-invalid');const e=$('e'+k[0].toUpperCase()+k.slice(1));if(e)e.textContent='';});$('fErr').textContent='';}
+$('newForm').addEventListener('submit',e=>{
+  e.preventDefault(); clearErrs();
+  const f={name:$('fName').value,postcode:$('fPostcode').value,contact:$('fContact').value,category:$('fCategory').value,priority:$('fPriority').value,channel:$('fChannel').value,desc:$('fDesc').value,notDup:$('fNotDup').checked};
+  const r=E.createCase(f,S.role,S.cases,S.now,S.seq);
+  if(!r.ok){
+    if(r.why){$('fErr').textContent=r.why;return;}
+    let first=null; Object.entries(r.errors).forEach(([k,m])=>{if(k==='dup')return;const id=F[k];$(id).setAttribute('aria-invalid','true');$('e'+k[0].toUpperCase()+k.slice(1)).textContent=m;first=first||id;});
+    if(r.errors.dup){$('dupWrap').hidden=false;$('fErr').textContent=r.errors.dup;first=first||'fNotDup';}
+    else $('fErr').textContent=`Please fix ${Object.keys(r.errors).length} field${Object.keys(r.errors).length>1?'s':''} highlighted above.`;
+    $(first).focus(); return;
+  }
+  S.seq++; const c=r.case; S.cases.unshift(c);
+  const ack=E.acknowledge(c,S.now); logFlow(ack.flow,ack.ref,ack.text);
+  showEmail(c.contactType==='email'?`To: ${c.contact}\nSubject: We've logged your repair: ${c.ref}\n\nDear ${c.name},\n\nThank you for reporting a problem (${c.category.toLowerCase()}) at ${c.postcode}. Your reference is ${c.ref}.\nPriority: ${c.priority}. ${E.PRIORITIES[c.priority].target}, by ${fmt(c.due)}.\nWe'll contact you to arrange access. Please quote your reference if you get in touch.\n\nNorthbrook Council Repairs`:
+    `Call-back task\nAssigned to: Repairs team queue\nDue: within 2 hours\n\nNo email on file for ${c.name} (${c.contact}). Call to confirm reference ${c.ref}, priority ${c.priority} and target date ${fmt(c.due)}.`,'Flow ① output (simulated)');
+  $('newForm').reset(); $('dupWrap').hidden=true; $('hPostcode').textContent=''; priHint();
+  S.sel=c.ref; $('qView').value='open'; $('qSearch').value=''; renderAll();
+  announce(`Case ${c.ref} logged. Acknowledgement flow ran.`); $('dTitle').focus();
+});
+function showEmail(text,title){$('emailPrev').innerHTML=`<h3 style="margin:14px 0 0">${esc(title)}</h3><div class="emailbox">${esc(text)}</div>`;}
+$('fExample').addEventListener('click',()=>{
+  const n=S.exampleN++%3; clearErrs(); $('dupWrap').hidden=true; $('fNotDup').checked=false;
+  const open=S.cases.find(c=>E.isOpen(c.status));
+  const ex=[{name:'Maryam Iqbal',postcode:'NB4 2QS',contact:'maryam.iqbal@example.com',category:'Damp and mould',priority:'Urgent',channel:'Phone',desc:'Mould on bedroom ceiling, getting worse since October.'},
+    {name:'Peter Lindqvist',postcode:open.postcode,contact:'01632 960248',category:open.category,priority:open.priority,channel:'Web form',desc:'Neighbour reporting the same problem again: '+open.desc.toLowerCase()},
+    {name:'Alex Morgan',postcode:'SW1A 1AA',contact:'alex@example',category:'Leak',priority:'Routine',channel:'Email',desc:'Tap drips'}][n];
+  $('fName').value=ex.name;$('fPostcode').value=ex.postcode;$('fContact').value=ex.contact;$('fCategory').value=ex.category;$('fPriority').value=ex.priority;$('fChannel').value=ex.channel;$('fDesc').value=ex.desc;priHint();
+  $('hPostcode').textContent=['Example 1 of 3: a valid case.','Example 2 of 3: matches an open case, to show the duplicate check.','Example 3 of 3: several invalid fields, to show validation.'][n];
+});
+
+// ---------- weekly summary ----------
+$('runWeekly').addEventListener('click',()=>{
+  const w=E.weekly(S.cases,S.now);
+  logFlow('③','',`weekly summary emailed: ${w.opened} opened, ${w.resolved} resolved, ${w.open} open, ${w.breached} breached.`,'run now');
+  showEmail(`To: Repairs service manager\nSubject: Repairs weekly summary to ${fmtDay(S.now)}\n\nLast 7 days\n  Cases opened:     ${w.opened}\n  Cases resolved:   ${w.resolved}\n  Resolved in SLA:  ${w.metPct===null?'n/a':w.metPct+'% ('+w.met+' of '+w.resolved+')'}\n\nNow\n  Open backlog:     ${w.open}\n  Breached SLA:     ${w.breached}\n\nOpen by category (breached)\n${w.byCat.map(x=>'  '+(x.k+':').padEnd(30)+x.open+(x.breached?' ('+x.breached+' breached)':'')).join('\n')}`,'Flow ③ output (simulated)');
+  renderLog(); announce('Weekly summary flow ran. The output is below the run log.');
+});
+
+// ---------- migration ----------
+const MIG_UI={Migrated:['var(--good)','✓'],Flagged:['var(--warning)','⚠'],Rejected:['var(--critical)','✕']};
+$('csv').value=E.SAMPLE_CSV;
+function dryRun(){
+  const m=E.migrate($('csv').value,START);
+  if(m.error){$('migKpis').innerHTML='';$('migBody').innerHTML=`<tr><td colspan="5" class="full" style="color:var(--critical-ink)">✕ ${esc(m.error)}</td></tr>`;$('migLive').textContent=m.error;return;}
+  const k=m.counts;
+  $('migKpis').innerHTML=[[`<span style="color:var(--good-ink)">✓ ${k.migrated}</span>`,'Migrated cleanly'],[`<span style="color:var(--warn-ink)">⚠ ${k.flagged}</span>`,'Migrated with a flag for review'],[`<span style="color:var(--critical-ink)">✕ ${k.rejected}</span>`,'Rejected back to the business'],[m.contacts.created,`Contacts created (${m.contacts.merged} merged)`]].map(x=>`<div class="card kpi"><div class="v">${x[0]}</div><div class="l">${x[1]}</div></div>`).join('');
+  $('migBody').innerHTML=m.rows.map(r=>`<tr><td data-label="Line" class="num">${r.line}</td><td data-label="Legacy ref" class="nw">${esc(r.ref)}</td><td data-label="Outcome">${pill(MIG_UI,r.outcome)}</td><td data-label="Mapped to">${r.mapped?esc(r.mapped):'<span class="muted">Not loaded</span>'}</td><td data-label="Issues" class="${r.outcome==='Rejected'?'bad':r.issues.length?'warn':''}">${r.issues.length?r.issues.map(esc).join('<br>'):'<span class="muted">None</span>'}</td></tr>`).join('')||'<tr><td colspan="5" class="full muted">No data rows.</td></tr>';
+  $('migNote').textContent=`${k.total} rows read · ${k.migrated+k.flagged} would load`;
+  $('migLive').textContent=`Dry run complete: ${k.migrated} migrated, ${k.flagged} flagged, ${k.rejected} rejected.`;
+}
+$('dryRun').addEventListener('click',dryRun);
+$('csvReset').addEventListener('click',()=>{$('csv').value=E.SAMPLE_CSV;dryRun();});
+
+// ---------- backlog ----------
+const STORIES=[
+  ['CM-12','Log a repair case','Must',5,'As a contact-centre caseworker, I want to log a repair with validated details, so that the case can be worked without calling the citizen back.',
+`Scenario: Valid case is logged and acknowledged
+  Given I am signed in as a caseworker
+  When I log a case with a valid Northbrook postcode
+  Then a case reference is created with status "New"
+  And the citizen is sent an acknowledgement
+
+Scenario: Out-of-area postcode
+  When I enter a postcode outside Northbrook
+  Then the case is not created
+  And I am told to signpost the caller`],
+  ['CM-14','SLA timers and escalation','Must',8,'As a team leader, I want cases to show time left against their SLA and escalate on breach, so that nothing urgent is missed.',
+`Scenario: Emergency case breaches
+  Given an Emergency case logged 25 hours ago
+  And it is not resolved
+  Then its SLA shows "Breached"
+  And the team leader is notified once
+
+Scenario: Waiting on the citizen
+  Given a case is "Awaiting citizen" for 2 days
+  When it returns to "In progress"
+  Then its target moves out by 2 days`],
+  ['CM-17','Reassign a case','Must',3,'As a team leader, I want to reassign a case to another caseworker, so that work is balanced when someone is off.',
+`Scenario: Caseworker cannot reassign
+  Given I am signed in as a caseworker
+  And a case is owned by a colleague
+  Then I cannot reassign it
+  And I can see why`],
+  ['CM-21','Migrate legacy cases','Must',13,'As the product owner, I want legacy cases moved with their history and a clear exceptions report, so that the old CRM can be switched off.',
+`Scenario: Dry run reconciles
+  Given the legacy export of 15 rows
+  When I run the migration dry run
+  Then migrated + flagged + rejected = 15
+  And every rejected row has a reason`],
+  ['CM-28','Read-only audit access','Must',3,'As an internal auditor, I want to read any case and its full history without being able to change it, so that I can assure the service.',
+`Scenario: Auditor is read-only
+  Given I am signed in as an auditor
+  When I open any case
+  Then I can see its audit history
+  And every edit action is unavailable`],
+  ['CM-25','Weekly service summary','Should',2,'As the service manager, I want a Monday summary of volumes and SLA performance, so that I don\'t have to build it by hand.',
+`Scenario: Summary is sent
+  Given it is Monday 07:00
+  Then the manager receives opened, resolved,
+  open and breached counts for the last 7 days`]];
+$('backlog').innerHTML=STORIES.map(s=>`<details><summary>${esc(s[0])} · ${esc(s[1])} <span class="tag">${esc(s[2])} · ${s[3]} pts</span></summary><p style="font-size:14px;color:var(--text-2);margin:8px 0 0">${esc(s[4])}</p><pre class="code" tabindex="0" aria-label="Acceptance criteria">${esc(s[5])}</pre></details>`).join('');
+
+// ---------- tests ----------
+const EXAMPLES=[['SIT-01','SIT','Postcode connector returns the ward for a valid postcode and a clear message on 404'],['SIT-02','SIT','Acknowledgement email arrives through the Outlook connector with the right reference'],['SIT-03','SIT','Migration load to Test: row counts reconcile with the dry run'],
+  ['UAT-01','UAT','Caseworker logs a phone case in under 2 minutes'],['UAT-02','UAT','Team leader reassigns a breached case and sees it in the new owner\'s queue'],['UAT-03','UAT','Auditor opens any case and sees full history with no edit actions']];
+function renderTests(){
+  const T=E.runTests(); window.__testResults=T; const pass=T.filter(t=>t.ok).length;
+  $('testSummary').textContent=`${pass} of ${T.length} unit tests passed in your browser (run at ${new Date().toLocaleTimeString('en-GB')}).`;
+  $('testBody').innerHTML=T.map(t=>`<tr><td data-label="ID" class="nw">${t.id}</td><td data-label="Level">Unit</td><td data-label="Scenario">${esc(t.name)}${t.ok?'':'<div class="small" style="color:var(--critical-ink)">'+esc(t.detail)+'</div>'}</td><td data-label="Result" class="nw">${t.ok?'<span style="color:var(--good-ink)">✓ Pass</span>':'<span style="color:var(--critical-ink)">✕ Fail</span>'}</td></tr>`).join('')+
+    EXAMPLES.map(x=>`<tr><td data-label="ID" class="nw">${x[0]}</td><td data-label="Level">${x[1]}</td><td data-label="Scenario">${esc(x[2])}</td><td data-label="Result" class="nw"><span class="muted">○ Example</span></td></tr>`).join('');
+}
+$('runTests').addEventListener('click',()=>{renderTests();});
+
+// ---------- render ----------
+function renderAll(){$('clockTxt').textContent=fmt(S.now);renderRoles();renderKpis();renderQueue();renderDetail();renderMatrix();renderLog();}
+fresh(); renderAll(); priHint(); dryRun(); renderTests();
+window.__demo={get state(){return S;}};
+})();
+</script>
+</body>
+</html>
