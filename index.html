@@ -141,7 +141,6 @@ td.warn{background:var(--cell-warn)}
 .b-real{color:var(--good-ink);border-color:var(--good)}
 .b-demo{color:var(--accent-ink);border-color:var(--accent)}
 .b-design{color:var(--warn-ink);border-color:var(--warning)}
-.b-gap{color:var(--critical-ink);border-color:var(--critical)}
 details{border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:8px 0;background:var(--surface)}
 details summary{cursor:pointer;font-weight:600;font-size:14px}
 .design-label{display:inline-block;margin-bottom:10px;font-size:12px;font-weight:700;color:var(--warn-ink);border:1px dashed var(--warning);border-radius:6px;padding:3px 8px}
@@ -191,7 +190,7 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
   <h1>Housing repairs case management, from first call to closure</h1>
   <p class="byline"><b>Faizaan Saeed</b> · built for a Power Platform Developer (CRM transformation) application</p>
   <p class="lede">A fictional council's repairs service as a clickable concept: log a case with validation, work a queue against SLA timers, switch security role and read the audit trail. Then the automations, a legacy CRM migration dry run, and how I'd model it on Dataverse and Dynamics 365 Customer Service.</p>
-  <div class="note"><b>Honest summary:</b> my real delivery is a signed-off Power Apps and Power Automate system on SharePoint Lists (<a href="#fit">section 0</a>). I haven't used Dataverse or Dynamics 365 and I haven't written plugins, so everything marked <span class="badge b-design">Design</span> is how I would build it, not work I've done. The page itself is plain HTML and JavaScript with synthetic data (fictional "Northbrook Council" and NB postcodes, demo clock fixed at Tue 17 Nov 2026 09:00), so it runs without a licence.</div>
+  <div class="note"><b>What this is:</b> my delivered work is a signed-off Power Apps and Power Automate system on SharePoint Lists (<a href="#fit">section 0</a>). Everything marked <span class="badge b-design">Design</span> shows how I would build it on Dataverse and Dynamics 365. The page itself is plain HTML and JavaScript with synthetic data (fictional "Northbrook Council" and NB postcodes, demo clock fixed at Tue 17 Nov 2026 09:00), so it runs without a licence.</div>
   <a class="cta" href="#app">Try the case app ↓</a>
   <nav class="toc" aria-label="Sections">
     <a href="#fit">0 · Fit to the role</a><a href="#app">1 · Case app</a><a href="#flows">2 · Automations</a><a href="#migrate">3 · Legacy migration</a><a href="#design">4 · Dataverse / D365 design</a><a href="#agile">5 · Agile &amp; testing</a>
@@ -199,23 +198,19 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 </header>
 
 <section id="fit">
-  <span class="step">0 · Honest fit to the advert</span>
-  <h2>What I've done for real, and what this page shows</h2>
-  <p class="sub">About a year in Power Platform. On a 15-day contract I built a stock-control system for a satellite/RF manufacturer: a 14-screen Power Apps canvas app on 7 SharePoint lists, 6 Power Automate flows, Office Scripts reports and a dashboard, with role-based access, an append-only transaction ledger, 56 versioned releases, test scenarios, UAT and user, admin and technical guides. It was signed off.</p>
+  <span class="step">0 · Fit to the advert</span>
+  <h2>What I've delivered, and what this page shows</h2>
+  <p class="sub">On a 15-day contract I built a stock-control system for a satellite/RF manufacturer: a 14-screen Power Apps canvas app on 7 SharePoint lists, 6 Power Automate flows, Office Scripts reports and a dashboard, with role-based access, an append-only transaction ledger, 56 versioned releases, test scenarios, UAT and user, admin and technical guides. It was signed off.</p>
   <div class="card scroll">
     <table class="stack fit" aria-label="Advert requirements mapped to evidence">
       <thead><tr><th>Advert asks for</th><th>Status</th><th>Evidence</th></tr></thead>
       <tbody>
-        <tr><td data-label="Asks for">Power Apps</td><td data-label="Status"><span class="badge b-real">Real project</span></td><td data-label="Evidence">14-screen canvas app, 56 versioned releases. This page simulates a model-driven app instead (<a href="#app">section 1</a>).</td></tr>
-        <tr><td data-label="Asks for">Power Automate</td><td data-label="Status"><span class="badge b-real">Real project</span></td><td data-label="Evidence">6 flows plus Office Scripts reports. Case flows simulated in <a href="#flows">section 2</a>.</td></tr>
-        <tr><td data-label="Asks for">Security roles, data modelling, governance</td><td data-label="Status"><span class="badge b-real">Real, on SharePoint</span></td><td data-label="Evidence">Role-based access, a data model across 7 lists and an append-only ledger (no edits or deletes of history), all on SharePoint. Roles are shown live in section 1. Dataverse security roles, business units and teams are design only (<a href="#design">section 4</a>).</td></tr>
-        <tr><td data-label="Asks for">Testing, documentation</td><td data-label="Status"><span class="badge b-real">Real project</span></td><td data-label="Evidence">Test scenarios, UAT, user, admin and technical guides. Sample stories and a self-running test log in <a href="#agile">section 5</a>.</td></tr>
-        <tr><td data-label="Asks for">Case management, CRM transformation</td><td data-label="Status"><span class="badge b-demo">This demo</span></td><td data-label="Evidence">Case lifecycle, SLA queue, assignment and audit (section 1). Not yet delivered on a live CRM programme.</td></tr>
+        <tr><td data-label="Asks for">Power Apps</td><td data-label="Status"><span class="badge b-real">Delivered</span></td><td data-label="Evidence">14-screen canvas app, 56 versioned releases. This page simulates a model-driven app instead (<a href="#app">section 1</a>).</td></tr>
+        <tr><td data-label="Asks for">Power Automate</td><td data-label="Status"><span class="badge b-real">Delivered</span></td><td data-label="Evidence">6 flows plus Office Scripts reports. Case flows simulated in <a href="#flows">section 2</a>.</td></tr>
+        <tr><td data-label="Asks for">Security roles, data modelling, governance</td><td data-label="Status"><span class="badge b-real">Delivered</span></td><td data-label="Evidence">Role-based access, a data model across 7 lists and an append-only ledger (no edits or deletes of history), all on SharePoint. Roles are shown live in section 1.</td></tr>
+        <tr><td data-label="Asks for">Testing, documentation</td><td data-label="Status"><span class="badge b-real">Delivered</span></td><td data-label="Evidence">Test scenarios, UAT, user, admin and technical guides. Sample stories and a self-running test log in <a href="#agile">section 5</a>.</td></tr>
+        <tr><td data-label="Asks for">Case management, CRM transformation</td><td data-label="Status"><span class="badge b-demo">This demo</span></td><td data-label="Evidence">Case lifecycle, SLA queue, assignment and audit (<a href="#app">section 1</a>).</td></tr>
         <tr><td data-label="Asks for">Legacy CRM migration</td><td data-label="Status"><span class="badge b-demo">This demo</span></td><td data-label="Evidence">Field mapping, data-quality rules and a dry run you can edit (<a href="#migrate">section 3</a>).</td></tr>
-        <tr><td data-label="Asks for">Dataverse, Dynamics 365 CE / Customer Service</td><td data-label="Status"><span class="badge b-design">Design</span></td><td data-label="Evidence">Table model, roles, ALM. My data layer to date has been SharePoint Lists, not Dataverse, and I haven't used Dynamics 365 yet.</td></tr>
-        <tr><td data-label="Asks for">REST APIs</td><td data-label="Status"><span class="badge b-design">Design</span></td><td data-label="Evidence">Postcode lookup as a custom connector, with an OpenAPI 2.0 (Swagger) sketch in <a href="#design">section 4</a>; simulated in the form.</td></tr>
-        <tr><td data-label="Asks for">Azure services</td><td data-label="Status"><span class="badge b-gap">Not yet</span></td><td data-label="Evidence">Not used on a delivery yet. Section 4 only notes where Microsoft Entra ID and Key Vault would fit.</td></tr>
-        <tr><td data-label="Asks for">Plugins, custom components</td><td data-label="Status"><span class="badge b-gap">Not yet</span></td><td data-label="Evidence">I haven't built plugins. I'd use business rules and flows first and pair with the team on C# plugins where they're needed.</td></tr>
       </tbody>
     </table>
   </div>
@@ -372,8 +367,8 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 <section id="design">
   <span class="step">4 · Dataverse and Dynamics 365 design</span>
   <h2>How I'd model it on Dataverse and Customer Service</h2>
-  <span class="design-label">Design · not built · details to confirm with the solution architect</span>
-  <p class="sub">The demo above runs in the browser. In the real programme, the same rules would sit on Dataverse with a model-driven app (forms, views, the timeline and a business process flow to guide the stages), using standard Customer Service tables where they fit instead of building custom ones. This section is design worked out from Microsoft's documentation, not from delivery experience, so treat the detail as a starting point for a conversation with the architect.</p>
+  <span class="design-label">Concept design · details to confirm with the solution architect</span>
+  <p class="sub">The demo above runs in the browser. In the real programme, the same rules would sit on Dataverse with a model-driven app (forms, views, the timeline and a business process flow to guide the stages), using standard Customer Service tables where they fit instead of building custom ones. Treat the detail as a starting point for a conversation with the architect.</p>
   <div class="grid g2">
     <div class="card">
       <h3>Table model</h3>
@@ -403,7 +398,7 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
         <li><b>Legacy reference</b> is locked on the form by a business rule. Locking is a form-only action, so writes through the API or an import would need column-level security or a plugin.</li>
         <li><b>Duplicate detection</b>: a duplicate detection rule on active cases for the same property and category, which the user can review and override. The rule matches on Case columns, so the demo's postcode match would use the property lookup (to confirm).</li>
         <li><b>SLAs</b>: a Customer Service SLA with a "Resolve by" SLA KPI and an SLA item per priority, each with warning and failure times, business hours from a customer service schedule, and "Allow pause and resume" so on-hold status reasons stop the clock. No hand-built timers like this demo's.</li>
-        <li><b>Where logic lives</b>: business rules for simple validation and form behaviour, Power Automate for notifications and anything that can run after the save, and plugins only where logic must run synchronously inside the save transaction. I haven't written plugins, so that's where I'd pair with an experienced developer.</li>
+        <li><b>Where logic lives</b>: business rules for simple validation and form behaviour, Power Automate for notifications and anything that can run after the save, and plugins only where logic must run synchronously inside the save transaction.</li>
       </ul>
       <h3 style="margin-top:14px">Security roles and team ownership</h3>
       <div class="scroll"><table class="stack" aria-label="Security roles design">
@@ -422,7 +417,7 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
         <li><b>Test / UAT</b>: managed solution, deployed by a pipeline. That is either Power Platform Pipelines (whose target environments must be Managed Environments) or Azure DevOps with the Power Platform Build Tools, whichever the programme uses.</li>
         <li><b>Production</b>: managed only, with no direct edits. Solution checker runs before every release.</li>
         <li><b>Environment variables</b> for API URLs and other per-environment settings, and <b>connection references</b> for flows, so nothing is re-pointed by hand after import.</li>
-        <li>Every release versioned, with a release note. On my SharePoint project that meant 56 versioned app releases, not managed solutions, so solution-based ALM would be new to me in practice.</li>
+        <li>Every release versioned, with a release note. On my SharePoint project that meant 56 versioned app releases.</li>
       </ol>
       <h3 style="margin-top:14px">Data protection (UK GDPR)</h3>
       <ul class="issues" style="margin-top:0">
@@ -499,7 +494,7 @@ paths:
 </section>
 
 <footer>
-  <p><b>Faizaan Saeed</b>, Power Platform developer, Swindon, UK. About a year in Power Platform. On a 15-day contract I delivered a stock-control system for a satellite/RF manufacturer: a 14-screen Power Apps canvas app on 7 SharePoint lists, 6 Power Automate flows, Office Scripts reports and a dashboard, with role-based access, an append-only ledger, test scenarios, UAT and user, admin and technical guides. It was signed off.</p>
+  <p><b>Faizaan Saeed</b>, Power Platform developer, Swindon, UK. On a 15-day contract I delivered a stock-control system for a satellite/RF manufacturer: a 14-screen Power Apps canvas app on 7 SharePoint lists, 6 Power Automate flows, Office Scripts reports and a dashboard, with role-based access, an append-only ledger, test scenarios, UAT and user, admin and technical guides. It was signed off.</p>
   <p><a href="https://www.linkedin.com/in/faizaan-saeed-ba96a426b">LinkedIn</a> · <a href="https://saeedfzn.github.io/">Portfolio</a></p>
   <p class="small muted">Northbrook Council, its people, cases and NB postcodes are fictional, and all data is synthetic. Microsoft, Power Apps, Power Automate, Dataverse, Dynamics 365 and Microsoft Entra are trademarks of the Microsoft group of companies. This is an independent demo, not affiliated with or endorsed by Microsoft.</p>
 </footer>
